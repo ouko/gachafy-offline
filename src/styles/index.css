@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    @apply bg-background-dark text-text-primary min-h-screen;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  body {
+    @apply font-body antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .tap-target {
+    @apply min-h-tap min-w-tap;
+  }
+
+  .thumb-zone {
+    @apply h-thumb;
+  }
+
+  .motion-safe {
+    @apply transition-all duration-600 ease-[cubic-bezier(0.22,1,0.36,1)];
+  }
+}
+
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    .animate-burst,
+    .animate-pulse,
+    .transition-all,
+    .transform {
+      @apply animate-none;
+    }
+  }
+}
