@@ -8,68 +8,60 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 240 23% 9%;
-    --foreground: 240 19% 95%;
+    /* Modern DeFi Dark Theme - Inspired by Uniswap, Aave, 1inch */
+    --background: 219 17% 8%;          /* Deep dark blue-gray */
+    --foreground: 210 11% 96%;         /* Clean white */
 
-    --card: 240 19% 12%;
-    --card-foreground: 240 19% 95%;
+    --card: 219 17% 10%;               /* Slightly lighter than bg */
+    --card-foreground: 210 11% 96%;   /* Clean white */
 
-    --popover: 240 19% 12%;
-    --popover-foreground: 240 19% 95%;
+    --popover: 219 17% 12%;            /* Card variant */
+    --popover-foreground: 210 11% 96%;
 
-    --primary: 262 83% 58%;
-    --primary-foreground: 240 19% 95%;
+    --primary: 262 75% 65%;            /* Vibrant purple - DeFi signature */
+    --primary-foreground: 219 17% 8%;
 
-    --secondary: 240 19% 16%;
-    --secondary-foreground: 240 19% 95%;
+    --secondary: 219 17% 16%;          /* Subtle gray */
+    --secondary-foreground: 210 11% 96%;
 
-    --muted: 240 19% 16%;
-    --muted-foreground: 240 10% 65%;
+    --muted: 219 17% 14%;              /* Muted background */
+    --muted-foreground: 210 11% 71%;  /* Muted text */
 
-    --accent: 262 83% 58%;
-    --accent-foreground: 240 19% 95%;
+    --accent: 262 75% 65%;             /* Purple accent */
+    --accent-foreground: 219 17% 8%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 240 19% 95%;
+    --destructive: 0 84% 60%;          /* Red for errors */
+    --destructive-foreground: 210 11% 96%;
 
-    --border: 240 19% 16%;
-    --input: 240 19% 16%;
-    --ring: 262 83% 58%;
+    --border: 219 17% 20%;             /* Subtle borders */
+    --input: 219 17% 16%;              /* Input backgrounds */
+    --ring: 262 75% 65%;               /* Focus rings */
 
-    --radius: 0.75rem;
-    
-    /* GachaFi custom design tokens */
-    --glow-primary: 262 83% 58%;
-    --glow-secondary: 280 100% 70%;
-    --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(280 100% 70%));
-    --gradient-reveal: linear-gradient(135deg, #8338EC, #0D0D0D);
-    --gradient-card: linear-gradient(145deg, hsl(240 19% 12%), hsl(240 19% 16%));
-    --shadow-glow: 0 0 40px hsl(262 83% 58% / 0.3);
-    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --animation-float: float 6s ease-in-out infinite;
+    --radius: 0.75rem;                 /* Rounded corners */
 
+    /* Custom DeFi variables */
+    --neon-purple: 262 75% 65%;
+    --neon-pink: 328 85% 70%;
+    --neon-blue: 195 100% 50%;
+    --gradient-primary: linear-gradient(135deg, hsl(var(--neon-purple)), hsl(var(--neon-pink)));
+    --glow-purple: 0 0 30px hsla(262, 75%, 65%, 0.6);
+    --glass-bg: hsla(219, 17%, 12%, 0.8);
+
+    /* Sidebar variables for compatibility */
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    /* Dark mode uses same colors for consistency */
-    --background: 240 23% 9%;
-    --foreground: 240 19% 95%;
+    /* Enhanced dark theme for premium feel */
+    --background: 219 17% 6%;          /* Even darker */
+    --foreground: 210 11% 98%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -85,39 +77,120 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground font-sans;
+    background-image: 
+      radial-gradient(circle at 20% 80%, hsla(262, 75%, 65%, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, hsla(328, 85%, 70%, 0.15) 0%, transparent 50%);
+    min-height: 100vh;
   }
 }
 
-@layer utilities {
+@layer components {
+  /* Glassmorphism card component */
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-lg border border-white/10;
+    box-shadow: 
+      0 8px 32px 0 rgba(31, 38, 135, 0.37),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Neon button component */
+  .neon-button {
+    @apply relative overflow-hidden;
+    background: var(--gradient-primary);
+    box-shadow: var(--glow-purple);
+    transition: all 0.3s ease;
+  }
+
+  .neon-button:hover {
+    box-shadow: 0 0 40px hsla(262, 75%, 65%, 0.8);
+    transform: translateY(-2px);
+  }
+
+  .neon-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  .neon-button:hover::before {
+    left: 100%;
+  }
+
+  /* Floating animation */
+  .float-element {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Glow pulse animation */
+  .glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shimmer effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Modern scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)/0.8);
+  }
+
+  /* Legacy utility classes for compatibility */
   .gradient-hero {
-    background: var(--gradient-hero);
-  }
-  
-  .gradient-reveal {
-    background: var(--gradient-reveal);
-  }
-  
-  .gradient-card {
-    background: var(--gradient-card);
+    background: var(--gradient-primary);
   }
   
   .shadow-glow {
-    box-shadow: var(--shadow-glow);
-  }
-  
-  .shadow-card {
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--glow-purple);
   }
   
   .transition-smooth {
-    transition: var(--transition-smooth);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .animate-float {
-    animation: var(--animation-float);
+    animation: float 3s ease-in-out infinite;
   }
 }
 

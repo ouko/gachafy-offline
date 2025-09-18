@@ -336,49 +336,55 @@ const Open = () => {
   const isProcessing = isLoading || !!pendingTx;
 
   return (
-    <main className="min-h-screen bg-background p-4 flex flex-col">
+    <main className="min-h-screen bg-background p-4 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-purple rounded-full opacity-20 blur-xl float-element"></div>
+        <div className="absolute bottom-20 right-10 w-24 h-24 bg-gradient-neon rounded-full opacity-30 blur-lg float-element" style={{animationDelay: '1s'}}></div>
+      </div>
+
       {/* Top Balance Bar */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-8 relative z-10">
         <div 
-          className="bg-card rounded-full px-6 py-2 shadow-card border border-border flex items-center gap-3 cursor-pointer hover:bg-card/80 transition-colors select-none"
+          className="glass-card rounded-full px-6 py-3 flex items-center gap-3 cursor-pointer hover:scale-105 transition-all duration-300 glow-pulse select-none"
           onTouchStart={handleBalanceSwipeStart}
           onTouchEnd={handleBalanceSwipeEnd}
           title="Swipe up to bridge USDC → XRD"
         >
-          <span className="text-sm font-semibold text-primary">
+          <span className="text-lg font-bold gradient-text font-mono">
             {balance.toFixed(3)} XRD
           </span>
           
           {/* Streak Pill */}
           {streak > 0 && (
-            <div className="flex items-center gap-1 bg-orange-500 text-white px-2 py-1 rounded-full">
-              <Flame size={12} />
-              <span className="text-xs font-medium">Day-{streak}</span>
+            <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full shadow-neon">
+              <Flame size={14} className="animate-pulse" />
+              <span className="text-sm font-bold">Day-{streak}</span>
             </div>
           )}
           
           {!isConnected && (
-            <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+            <span className="text-xs bg-red-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
               NOT CONNECTED
             </span>
           )}
           {isDemoMode && (
-            <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+            <span className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full shadow-glow">
               DEMO MODE
             </span>
           )}
           {!isOnline && (
-            <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
+            <span className="text-xs bg-orange-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
               OFFLINE
             </span>
           )}
           {pendingTx && (
-            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">
+            <span className="text-xs bg-blue-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm font-mono">
               TX: {shortenTxHash(pendingTx)}
             </span>
           )}
           {queuedRequests.length > 0 && (
-            <span className="text-xs bg-purple-500 text-white px-2 py-1 rounded-full">
+            <span className="text-xs bg-purple-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
               {queuedRequests.length} queued
             </span>
           )}
@@ -386,27 +392,30 @@ const Open = () => {
       </div>
 
       {/* Tier Cards */}
-      <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col justify-center relative z-10">
         <div className="overflow-x-auto">
-          <div className="flex gap-4 px-4 snap-x snap-mandatory">
-            {tiers.map((tier) => (
+          <div className="flex gap-6 px-4 snap-x snap-mandatory justify-center">{tiers.map((tier) => (
               <Card
                 key={tier.id}
                 className={cn(
-                  "min-w-[110px] h-[140px] flex flex-col items-center justify-center cursor-pointer transition-smooth snap-center",
-                  "bg-gradient-to-br gradient-card border",
+                  "min-w-[120px] h-[160px] flex flex-col items-center justify-center cursor-pointer transition-all duration-300 snap-center glass-card hover:scale-105",
                   selectedTier.id === tier.id 
-                    ? "border-[#8338EC] shadow-[0_0_0_4px_#8338EC40]" 
-                    : "border-border hover:border-primary/50"
+                    ? "border-primary shadow-neon-strong transform scale-105" 
+                    : "border-white/10 hover:border-primary/50 hover:shadow-neon"
                 )}
                 onClick={() => setSelectedTier(tier)}
               >
                 <div className={cn(
-                  "w-16 h-16 rounded-lg bg-gradient-to-br mb-2",
-                  rarityColors[tier.rarity]
-                )} />
-                <h3 className="text-sm font-semibold text-foreground">{tier.name}</h3>
-                <p className="text-xs text-muted-foreground">
+                  "w-20 h-20 rounded-xl mb-3 relative overflow-hidden",
+                  "bg-gradient-to-br shadow-lg",
+                  tier.rarity === "common" && "from-slate-400 to-slate-600",
+                  tier.rarity === "rare" && "from-blue-400 to-blue-600",
+                  tier.rarity === "epic" && "from-purple-400 to-pink-600"
+                )}>
+                  <div className="absolute inset-0 shimmer"></div>
+                </div>
+                <h3 className="text-base font-bold text-foreground mb-1">{tier.name}</h3>
+                <p className="text-sm text-muted-foreground font-mono">
                   {tier.price}{boosterActive && selectedTier.id === tier.id ? ` + ${boosterCost}` : ''} XRD
                 </p>
               </Card>
@@ -414,78 +423,80 @@ const Open = () => {
         </div>
 
         {/* Booster Toggle */}
-        <div className="mt-6 flex justify-center">
-          <div className="flex items-center space-x-3 bg-card rounded-full px-4 py-2 border border-border">
-            <Zap className={cn("w-4 h-4", boosterActive ? "text-yellow-500" : "text-muted-foreground")} />
-            <span className="text-sm font-medium">{boosterDescription}</span>
+        <div className="mt-8 flex justify-center">
+          <div className="glass-card rounded-full px-6 py-3 flex items-center space-x-4 hover:scale-105 transition-all duration-300">
+            <Zap className={cn("w-5 h-5 transition-colors", boosterActive ? "text-yellow-400" : "text-muted-foreground")} />
+            <span className="text-base font-medium">{boosterDescription}</span>
             <Switch 
               checked={boosterActive}
               onCheckedChange={toggleBooster}
-              className="data-[state=checked]:bg-yellow-500"
+              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-yellow-400 data-[state=checked]:to-orange-500"
             />
           </div>
         </div>
         </div>
 
         {/* CTA Button */}
-        <div className="mt-8 flex justify-center">
+        <div className="mt-10 flex justify-center">
           <Button
             size="lg"
             className={cn(
-              "w-[300px] h-[56px] text-lg font-semibold transition-smooth",
+              "w-[320px] h-[64px] text-xl font-bold transition-all duration-300 relative overflow-hidden",
               (!isConnected || isProcessing) 
-                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-glow"
+                ? "neon-button" 
                 : canAfford 
-                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow" 
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
+                  ? "neon-button hover:scale-105" 
+                  : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
             )}
             disabled={isProcessing || (!isConnected ? false : !canAfford)}
             onClick={openBox}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            {!isConnected 
-              ? 'Connect Wallet' 
-              : isProcessing 
-                ? 'Processing...' 
-                : !isOnline 
-                  ? `Queue ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
-                  : `Open ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
-            }
+            <span className="relative z-10">
+              {!isConnected 
+                ? 'Connect Wallet' 
+                : isProcessing 
+                  ? 'Processing...' 
+                  : !isOnline 
+                    ? `Queue ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
+                    : `Open ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
+              }
+            </span>
           </Button>
         </div>
 
         {/* Status Messages */}
-        <div className="text-center mt-4 space-y-2">
-          <p className="text-muted-foreground text-sm">
+        <div className="text-center mt-6 space-y-3 relative z-10">
+          <p className="text-muted-foreground text-base">
             {!isConnected 
               ? 'Connect your Radix wallet to start'
               : `Tap or swipe up to ${!isOnline ? 'queue' : 'open'}`
             }
           </p>
           {!isOnline && (
-            <p className="text-orange-400 text-xs">
+            <p className="text-orange-400 text-sm font-medium">
               Offline mode - requests will be processed when online
             </p>
           )}
           {pendingTx && (
-            <p className="text-blue-400 text-xs">
+            <p className="text-blue-400 text-sm font-medium">
               Transaction pending on Stokenet...
             </p>
           )}
           {isConnected && walletAddress && (
-            <p className="text-green-400 text-xs">
+            <p className="text-green-400 text-sm font-mono">
               Connected: {walletAddress.slice(0, 20)}...
               {isDemoMode && " (Demo)"}
             </p>
           )}
           {!isConnected && !isDemoMode && (
-            <p className="text-yellow-400 text-xs">
+            <p className="text-yellow-400 text-sm">
               Make sure you have Radix Wallet installed and connected to Stokenet
             </p>
           )}
           {isDemoMode && !isConnected && (
-            <p className="text-blue-400 text-xs">
+            <p className="text-blue-400 text-sm">
               Demo mode active - click Connect Wallet to simulate the experience
             </p>
           )}
@@ -494,7 +505,7 @@ const Open = () => {
 
       {/* Demo Notification Panel (only visible in demo mode) */}
       {isDemoMode && (
-        <div className="mt-8">
+        <div className="mt-8 relative z-10">
           <NotificationDemo />
         </div>
       )}
