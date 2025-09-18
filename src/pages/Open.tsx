@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { radixService, shortenTxHash } from "@/lib/radix";
 import { Flame, Zap } from "lucide-react";
 import { NotificationDemo } from "@/components/NotificationDemo";
+import { BridgeModal } from "@/components/BridgeModal";
 import { Switch } from "@/components/ui/switch";
 import { useBooster } from "@/hooks/useBooster";
 
@@ -45,6 +46,9 @@ const Open = () => {
   const [pendingTx, setPendingTx] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
+  const [swipeStartY, setSwipeStartY] = useState(0);
+  const [swipeStartTime, setSwipeStartTime] = useState(0);
 
   // Initialize Radix connection
   useEffect(() => {
@@ -289,6 +293,44 @@ const Open = () => {
     }
   };
 
+  // Balance pill swipe handlers
+  const handleBalanceSwipeStart = (e: React.TouchEvent) => {
+    setSwipeStartY(e.touches[0].clientY);
+    setSwipeStartTime(Date.now());
+  };
+
+  const handleBalanceSwipeEnd = (e: React.TouchEvent) => {
+    const endY = e.changedTouches[0].clientY;
+    const endTime = Date.now();
+    
+    const distance = swipeStartY - endY; // Positive = swipe up
+    const duration = endTime - swipeStartTime; // milliseconds
+    const velocity = Math.abs(distance) / duration; // pixels per ms
+    
+    // Convert to m/s (rough approximation: 1 pixel ≈ 0.26mm on typical mobile)
+    const velocityMeterPerSecond = velocity * 0.00026 * 1000;
+    
+    console.log(`Swipe velocity: ${velocityMeterPerSecond.toFixed(2)} m/s`);
+    
+    // Trigger bridge modal if swipe up velocity > 0.3 m/s
+    if (distance > 30 && velocityMeterPerSecond > 0.3) {
+      setIsBridgeModalOpen(true);
+    }
+  };
+
+  const handleBridgeSuccess = (amount: number, txHash: string) => {
+    // Update balance with bridged amount
+    setBalance(prev => prev + amount);
+    setIsBridgeModalOpen(false);
+    
+    toast({
+      title: "Bridge Complete!",
+      description: `+${amount.toFixed(3)} XRD added to wallet`,
+    });
+    
+    console.log('Bridge successful - TX Hash:', txHash);
+  };
+
   const totalPrice = selectedTier.price + (boosterActive ? boosterCost : 0);
   const canAfford = balance >= totalPrice;
   const isProcessing = isLoading || !!pendingTx;
@@ -297,7 +339,12 @@ const Open = () => {
     <main className="min-h-screen bg-background p-4 flex flex-col">
       {/* Top Balance Bar */}
       <div className="flex justify-center mb-8">
-        <div className="bg-card rounded-full px-6 py-2 shadow-card border border-border flex items-center gap-3">
+        <div 
+          className="bg-card rounded-full px-6 py-2 shadow-card border border-border flex items-center gap-3 cursor-pointer hover:bg-card/80 transition-colors select-none"
+          onTouchStart={handleBalanceSwipeStart}
+          onTouchEnd={handleBalanceSwipeEnd}
+          title="Swipe up to bridge USDC → XRD"
+        >
           <span className="text-sm font-semibold text-primary">
             {balance.toFixed(3)} XRD
           </span>
@@ -451,6 +498,13 @@ const Open = () => {
           <NotificationDemo />
         </div>
       )}
+
+      {/* Bridge Modal */}
+      <BridgeModal
+        isOpen={isBridgeModalOpen}
+        onClose={() => setIsBridgeModalOpen(false)}
+        onSuccess={handleBridgeSuccess}
+      />
     </main>
   );
 };
