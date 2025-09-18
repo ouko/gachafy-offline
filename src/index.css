@@ -42,6 +42,7 @@ All colors MUST be HSL.
     --glow-primary: 262 83% 58%;
     --glow-secondary: 280 100% 70%;
     --gradient-hero: linear-gradient(135deg, hsl(262 83% 58%), hsl(280 100% 70%));
+    --gradient-reveal: linear-gradient(135deg, #8338EC, #0D0D0D);
     --gradient-card: linear-gradient(145deg, hsl(240 19% 12%), hsl(240 19% 16%));
     --shadow-glow: 0 0 40px hsl(262 83% 58% / 0.3);
     --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
@@ -93,6 +94,10 @@ All colors MUST be HSL.
 @layer utilities {
   .gradient-hero {
     background: var(--gradient-hero);
+  }
+  
+  .gradient-reveal {
+    background: var(--gradient-reveal);
   }
   
   .gradient-card {

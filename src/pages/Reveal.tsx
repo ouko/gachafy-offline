@@ -1,37 +1,106 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import mythicBadge from "@/assets/mythic-badge.png";
 
 const Reveal = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const tier = location.state?.tier;
+  const [spCount, setSpCount] = useState(0);
+  const [showBadge, setShowBadge] = useState(false);
+
+  useEffect(() => {
+    if (!tier) {
+      navigate("/open");
+      return;
+    }
+
+    // Show badge with zoom-in animation
+    setTimeout(() => setShowBadge(true), 100);
+
+    // Animate SP counter from 0 to 1000 over 600ms
+    const startTime = Date.now();
+    const duration = 600;
+    const target = 1000;
+
+    const animateCounter = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setSpCount(Math.floor(easeOut * target));
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCounter);
+      }
+    };
+
+    setTimeout(() => {
+      animateCounter();
+    }, 400); // Start after badge appears
+
+    // Auto-timer to go back to /open after 3s
+    const timer = setTimeout(() => {
+      navigate("/open");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [tier, navigate]);
+
+  const shareOnTikTok = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          text: "🔥 I just opened a Mythic box! #MysteryChain",
+        });
+      } catch (error) {
+        console.log("Share canceled");
+      }
+    } else {
+      // Fallback for desktop
+      navigator.clipboard.writeText("🔥 I just opened a Mythic box! #MysteryChain");
+    }
+  };
 
   if (!tier) {
-    navigate("/open");
     return null;
   }
 
   return (
-    <main className="min-h-screen bg-background p-4 flex flex-col items-center justify-center">
-      <Card className="w-full max-w-sm p-8 gradient-card border-border text-center">
-        <h1 className="text-2xl font-bold text-foreground mb-4">
-          Box Opened!
-        </h1>
-        <p className="text-muted-foreground mb-6">
-          You opened a {tier.name} box for {tier.price} XRD
-        </p>
-        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-primary to-accent rounded-lg animate-pulse" />
-        <p className="text-lg font-semibold text-primary mb-8">
-          Revealing your reward...
-        </p>
-        <Button 
-          onClick={() => navigate("/open")}
-          className="w-full bg-primary hover:bg-primary/90"
-        >
-          Open Another Box
-        </Button>
-      </Card>
+    <main className="min-h-screen gradient-reveal flex flex-col items-center justify-center p-4">
+      {/* Badge with zoom-in animation */}
+      <div className="mb-8">
+        <img 
+          src={mythicBadge}
+          alt="Mythic Badge"
+          className={`w-[200px] h-[200px] object-contain transition-all duration-400 ${
+            showBadge ? 'animate-zoom-in' : 'scale-0 opacity-0'
+          }`}
+        />
+      </div>
+
+      {/* SP Counter */}
+      <div className="mb-8 text-center">
+        <div className="text-6xl font-bold text-white mb-2 animate-count-up">
+          {spCount.toLocaleString()}
+        </div>
+        <div className="text-xl text-purple-200">
+          SP Earned
+        </div>
+      </div>
+
+      {/* Share Button */}
+      <Button 
+        onClick={shareOnTikTok}
+        className="mb-4 bg-white text-black hover:bg-gray-100 font-semibold px-8 py-3"
+      >
+        Share on TikTok
+      </Button>
+
+      {/* Auto-return hint */}
+      <p className="text-purple-200 text-sm opacity-75">
+        Returning to boxes in 3 seconds...
+      </p>
     </main>
   );
 };
