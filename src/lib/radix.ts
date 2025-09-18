@@ -156,6 +156,69 @@ class RadixService {
       return 'pending';
     }
   }
+
+  // Creator earnings methods
+  async getUserCapsules(walletAddress: string): Promise<any[]> {
+    try {
+      console.log('Fetching user capsules for:', walletAddress);
+      
+      // Query user's NFT holdings to find created Capsules
+      const response = await fetch(`${STOKENET_CONFIG.gatewayUrl}/state/entity/details`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          addresses: [walletAddress],
+          aggregation_level: 'Vault',
+          opt_ins: {
+            ancestor_identities: false,
+            component_royalty_vault_balance: false,
+            package_royalty_vault_balance: false,
+            non_fungible_include_nfids: true,
+            explicit_metadata: []
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user capsules: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('User capsules data:', data);
+      
+      // Filter for Capsule NFTs (would need specific resource address)
+      return data.items || [];
+    } catch (error) {
+      console.error('Error fetching user capsules:', error);
+      return [];
+    }
+  }
+
+  async getCapsuleEarnings(capsuleId: string): Promise<{ today: number; allTime: number; totalOpens: number }> {
+    try {
+      console.log('Calculating earnings for capsule:', capsuleId);
+      
+      // Query transaction history for this Capsule
+      // Calculate 0.5% of SP from opens
+      // This would involve complex RPC queries to:
+      // 1. Find all transactions involving this Capsule
+      // 2. Parse transaction manifests for SP amounts
+      // 3. Calculate creator share (0.5%)
+      // 4. Aggregate by time periods
+      
+      // For demo, return simulated data
+      return {
+        today: Math.random() * 10,
+        allTime: Math.random() * 1000,
+        totalOpens: Math.floor(Math.random() * 2000),
+      };
+    } catch (error) {
+      console.error('Error calculating capsule earnings:', error);
+      return { today: 0, allTime: 0, totalOpens: 0 };
+    }
+  }
 }
 
 export const radixService = new RadixService();

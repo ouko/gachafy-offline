@@ -7,6 +7,7 @@ import { GachaFiProvider } from "@/contexts/GachaFiContext";
 import Index from "./pages/Index";
 import Open from "./pages/Open";
 import Reveal from "./pages/Reveal";
+import Creator from "./pages/Creator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/open" element={<Open />} />
             <Route path="/reveal" element={<Reveal />} />
+            <Route path="/creator" element={<Creator />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
