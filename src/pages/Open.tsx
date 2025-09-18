@@ -37,6 +37,7 @@ const Open = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [pendingTx, setPendingTx] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Initialize Radix connection
   useEffect(() => {
@@ -56,34 +57,44 @@ const Open = () => {
           setIsConnected(true);
           console.log('Auto-connected to wallet:', result.accounts[0].address);
         } else {
-          console.log('No auto-connection available');
+          console.log('No auto-connection available - enabling demo mode');
+          setIsDemoMode(true);
         }
       } catch (error) {
         console.error('Radix initialization error:', error);
+        console.log('Enabling demo mode due to connection error');
+        setIsDemoMode(true);
       }
     };
     
     initRadix();
   }, []);
 
-  // Poll balance every 5 seconds (live RPC)
+  // Poll balance every 5 seconds (live RPC or demo)
   useEffect(() => {
     if (!isConnected || !walletAddress) return;
 
     const fetchBalance = async () => {
       try {
-        const liveBalance = await radixService.getBalance(walletAddress);
-        setBalance(liveBalance);
+        if (isDemoMode) {
+          // Demo mode: simulate a realistic balance
+          setBalance(35.5);
+        } else {
+          const liveBalance = await radixService.getBalance(walletAddress);
+          setBalance(liveBalance);
+        }
       } catch (error) {
         console.error('Error fetching balance:', error);
       }
     };
 
     fetchBalance(); // Initial fetch
-    const interval = setInterval(fetchBalance, 5000);
+    const interval = isDemoMode ? null : setInterval(fetchBalance, 5000);
 
-    return () => clearInterval(interval);
-  }, [isConnected, walletAddress]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isConnected, walletAddress, isDemoMode]);
 
   // Poll pending transaction status
   useEffect(() => {
@@ -117,6 +128,24 @@ const Open = () => {
   const connectWallet = async () => {
     try {
       setIsLoading(true);
+      
+      if (isDemoMode) {
+        // Demo mode: simulate wallet connection
+        console.log('Demo mode: simulating wallet connection...');
+        setTimeout(() => {
+          const demoAddress = "account_tdx_2_demo_simulation_12345678";
+          setWalletAddress(demoAddress);
+          setIsConnected(true);
+          setBalance(35.5);
+          setIsLoading(false);
+          toast({
+            title: "Demo Wallet Connected",
+            description: "Connected to demo wallet (simulation mode)",
+          });
+        }, 1000);
+        return;
+      }
+      
       console.log('Manual wallet connection attempt...');
       const result = await radixService.connectWallet();
       console.log('Manual connection result:', result);
@@ -133,19 +162,23 @@ const Open = () => {
         console.error('No accounts returned from wallet connection');
         toast({
           title: "Connection Failed", 
-          description: "No wallet found or user cancelled",
+          description: "No wallet found or user cancelled - trying demo mode",
           variant: "destructive",
         });
+        setIsDemoMode(true);
       }
     } catch (error) {
       console.error('Manual wallet connection error:', error);
       toast({
         title: "Connection Failed",
-        description: "Failed to connect wallet",
+        description: "Failed to connect wallet - trying demo mode",
         variant: "destructive",
       });
+      setIsDemoMode(true);
     } finally {
-      setIsLoading(false);
+      if (!isDemoMode) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -175,19 +208,36 @@ const Open = () => {
       // Deduct balance immediately for UX
       setBalance(prev => prev - selectedTier.price);
       
-      // Call Radix Stokenet to mint badge NFT
-      const txHash = await radixService.mintGachaBadge(
-        walletAddress, 
-        selectedTier.id, 
-        selectedTier.price
-      );
-      
-      setPendingTx(txHash);
-      
-      toast({
-        title: "Transaction Submitted",
-        description: `TX: ${shortenTxHash(txHash)}`,
-      });
+      if (isDemoMode) {
+        // Demo mode: simulate transaction
+        const demoTxHash = `demo_tx_${Date.now()}_${selectedTier.id}`;
+        setPendingTx(demoTxHash);
+        
+        toast({
+          title: "Demo Transaction Submitted",
+          description: `TX: ${shortenTxHash(demoTxHash)} (simulation)`,
+        });
+        
+        // Simulate processing time and auto-complete
+        setTimeout(() => {
+          navigate("/reveal", { state: { tier: selectedTier, txHash: demoTxHash } });
+          setPendingTx("");
+        }, 3000);
+      } else {
+        // Call Radix Stokenet to mint badge NFT
+        const txHash = await radixService.mintGachaBadge(
+          walletAddress, 
+          selectedTier.id, 
+          selectedTier.price
+        );
+        
+        setPendingTx(txHash);
+        
+        toast({
+          title: "Transaction Submitted",
+          description: `TX: ${shortenTxHash(txHash)}`,
+        });
+      }
     } catch (error) {
       console.error('Mint failed:', error);
       // Revert balance on failure
@@ -230,6 +280,11 @@ const Open = () => {
           {!isConnected && (
             <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
               NOT CONNECTED
+            </span>
+          )}
+          {isDemoMode && (
+            <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+              DEMO MODE
             </span>
           )}
           {!isOnline && (
@@ -326,11 +381,17 @@ const Open = () => {
           {isConnected && walletAddress && (
             <p className="text-green-400 text-xs">
               Connected: {walletAddress.slice(0, 20)}...
+              {isDemoMode && " (Demo)"}
             </p>
           )}
-          {!isConnected && (
+          {!isConnected && !isDemoMode && (
             <p className="text-yellow-400 text-xs">
               Make sure you have Radix Wallet installed and connected to Stokenet
+            </p>
+          )}
+          {isDemoMode && !isConnected && (
+            <p className="text-blue-400 text-xs">
+              Demo mode active - click Connect Wallet to simulate the experience
             </p>
           )}
         </div>
