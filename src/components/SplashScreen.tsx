@@ -9,15 +9,15 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   const [currentPhase, setCurrentPhase] = useState(0);
 
   useEffect(() => {
-    // Phase transitions for dynamic content
+    // Visual phase transitions
     const phaseTimer = setInterval(() => {
       setCurrentPhase(prev => (prev + 1) % 3);
-    }, 1000);
+    }, 400);
 
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onComplete, 600);
-    }, 2200);
+      setTimeout(onComplete, 400);
+    }, 1500);
 
     return () => {
       clearTimeout(timer);
@@ -25,10 +25,11 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     };
   }, [onComplete]);
 
-  const phases = [
-    "Collect Premium Digital Assets",
-    "Trade Rare NFT Capsules", 
-    "Discover Mystical Treasures"
+  // Visual graphics instead of text
+  const visualElements = [
+    "💎", // Premium collectibles
+    "🎁", // Gacha boxes/capsules
+    "⚡"  // Power/energy
   ];
 
   if (!isVisible) {
@@ -45,16 +46,16 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           </div>
 
           <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
-            <div className="text-center animate-scale-in">
-              <h1 className="text-7xl md:text-9xl font-black bg-gradient-text bg-clip-text text-transparent mb-6 animate-holographic-pulse">
-                GachaFi
-              </h1>
-              <div className="h-8 mb-8">
-                <p className="text-xl md:text-2xl font-medium bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
-                  {phases[currentPhase]}
-                </p>
+          <div className="text-center animate-scale-in">
+            <h1 className="text-7xl md:text-9xl font-black bg-gradient-text bg-clip-text text-transparent mb-6 animate-holographic-pulse">
+              GachaFi
+            </h1>
+            <div className="h-16 mb-8 flex items-center justify-center">
+              <div className="text-6xl animate-magical-bounce">
+                {visualElements[currentPhase]}
               </div>
             </div>
+          </div>
 
             <div className="flex items-center space-x-3 animate-fade-in delay-500">
               <div className="w-3 h-3 bg-gradient-premium rounded-full animate-magical-bounce"></div>
@@ -80,16 +81,16 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         </div>
 
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
-          <div className="text-center animate-scale-in">
-            <h1 className="text-7xl md:text-9xl font-black bg-gradient-text bg-clip-text text-transparent mb-6 animate-holographic-pulse">
-              GachaFi
-            </h1>
-            <div className="h-8 mb-8">
-              <p className="text-xl md:text-2xl font-medium bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
-                {phases[currentPhase]}
-              </p>
+        <div className="text-center animate-scale-in">
+          <h1 className="text-7xl md:text-9xl font-black bg-gradient-text bg-clip-text text-transparent mb-6 animate-holographic-pulse">
+            GachaFi
+          </h1>
+          <div className="h-16 mb-8 flex items-center justify-center">
+            <div className="text-6xl animate-magical-bounce">
+              {visualElements[currentPhase]}
             </div>
           </div>
+        </div>
 
           <div className="flex items-center space-x-3 animate-fade-in delay-500">
             <div className="w-3 h-3 bg-gradient-premium rounded-full animate-magical-bounce"></div>
