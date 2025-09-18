@@ -7,7 +7,7 @@ import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { useStreak } from "@/hooks/useStreak";
 import { useToast } from "@/hooks/use-toast";
 import { radixService, shortenTxHash } from "@/lib/radix";
-import { Flame, Zap } from "lucide-react";
+import { Flame, Zap, Gem, Star, Crown, Sparkles } from "lucide-react";
 import { NotificationDemo } from "@/components/NotificationDemo";
 import { BridgeModal } from "@/components/BridgeModal";
 import { Switch } from "@/components/ui/switch";
@@ -26,10 +26,31 @@ const tiers: Tier[] = [
   { id: "epic", name: "Epic", price: 25, rarity: "epic" },
 ];
 
-const rarityColors = {
-  common: "from-slate-500 to-slate-600",
-  rare: "from-blue-500 to-blue-600", 
-  epic: "from-purple-500 to-purple-600",
+const rarityConfig = {
+  common: {
+    gradient: "from-slate-400 via-slate-500 to-slate-600",
+    glowColor: "rgba(148, 163, 184, 0.4)",
+    icon: Gem,
+    particles: 8,
+    animation: "animate-pulse",
+    borderGlow: "shadow-[0_0_15px_rgba(148,163,184,0.3)]",
+  },
+  rare: {
+    gradient: "from-blue-400 via-blue-500 to-purple-600",
+    glowColor: "rgba(59, 130, 246, 0.6)",
+    icon: Star,
+    particles: 12,
+    animation: "animate-bounce",
+    borderGlow: "shadow-[0_0_20px_rgba(59,130,246,0.5)]",
+  },
+  epic: {
+    gradient: "from-purple-400 via-pink-500 to-red-500",
+    glowColor: "rgba(168, 85, 247, 0.8)",
+    icon: Crown,
+    particles: 16,
+    animation: "animate-pulse",
+    borderGlow: "shadow-[0_0_25px_rgba(168,85,247,0.7)]",
+  },
 };
 
 const Open = () => {
@@ -394,32 +415,125 @@ const Open = () => {
       {/* Tier Cards */}
       <div className="flex-1 flex flex-col justify-center relative z-10">
         <div className="overflow-x-auto">
-          <div className="flex gap-6 px-4 snap-x snap-mandatory justify-center">{tiers.map((tier) => (
-              <Card
-                key={tier.id}
-                className={cn(
-                  "min-w-[120px] h-[160px] flex flex-col items-center justify-center cursor-pointer transition-all duration-300 snap-center glass-card hover:scale-105",
-                  selectedTier.id === tier.id 
-                    ? "border-primary shadow-neon-strong transform scale-105" 
-                    : "border-white/10 hover:border-primary/50 hover:shadow-neon"
-                )}
-                onClick={() => setSelectedTier(tier)}
-              >
-                <div className={cn(
-                  "w-20 h-20 rounded-xl mb-3 relative overflow-hidden",
-                  "bg-gradient-to-br shadow-lg",
-                  tier.rarity === "common" && "from-slate-400 to-slate-600",
-                  tier.rarity === "rare" && "from-blue-400 to-blue-600",
-                  tier.rarity === "epic" && "from-purple-400 to-pink-600"
-                )}>
-                  <div className="absolute inset-0 shimmer"></div>
-                </div>
-                <h3 className="text-base font-bold text-foreground mb-1">{tier.name}</h3>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {tier.price}{boosterActive && selectedTier.id === tier.id ? ` + ${boosterCost}` : ''} XRD
-                </p>
-              </Card>
-            ))}
+          <div className="flex gap-6 px-4 snap-x snap-mandatory justify-center">
+            {tiers.map((tier) => {
+              const config = rarityConfig[tier.rarity];
+              const IconComponent = config.icon;
+              const isSelected = selectedTier.id === tier.id;
+              
+              return (
+                <Card
+                  key={tier.id}
+                  className={cn(
+                    "min-w-[140px] h-[180px] flex flex-col items-center justify-center cursor-pointer transition-all duration-500 snap-center relative overflow-hidden group",
+                    "glass-card hover:scale-110 hover:-translate-y-2",
+                    isSelected 
+                      ? `border-primary ${config.borderGlow} transform scale-110 -translate-y-2` 
+                      : "border-white/10 hover:border-primary/50"
+                  )}
+                  onClick={() => setSelectedTier(tier)}
+                >
+                  {/* Animated background particles */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    {[...Array(config.particles)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "absolute w-1 h-1 bg-white rounded-full opacity-20",
+                          isSelected ? "animate-ping" : "group-hover:animate-ping"
+                        )}
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          top: `${Math.random() * 100}%`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          animationDuration: `${2 + Math.random() * 2}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Premium card content */}
+                  <div className="relative z-10 flex flex-col items-center">
+                    {/* Rarity icon with glow */}
+                    <div className={cn(
+                      "w-24 h-24 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center",
+                      `bg-gradient-to-br ${config.gradient}`,
+                      isSelected ? config.animation : `group-hover:${config.animation}`
+                    )}>
+                      {/* Inner glow effect */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl opacity-60"
+                        style={{
+                          background: `radial-gradient(circle at center, ${config.glowColor} 0%, transparent 70%)`,
+                        }}
+                      />
+                      
+                      {/* Shimmer overlay */}
+                      <div className={cn(
+                        "absolute inset-0 rounded-2xl",
+                        isSelected ? "shimmer" : "group-hover:shimmer"
+                      )} />
+                      
+                      {/* Icon */}
+                      <IconComponent 
+                        className={cn(
+                          "w-10 h-10 text-white relative z-10 drop-shadow-lg",
+                          isSelected ? "animate-pulse" : "group-hover:animate-pulse"
+                        )} 
+                      />
+                      
+                      {/* Corner sparkles */}
+                      <Sparkles 
+                        className={cn(
+                          "absolute top-1 right-1 w-4 h-4 text-white/60",
+                          isSelected ? "animate-spin" : "group-hover:animate-spin"
+                        )}
+                      />
+                    </div>
+
+                    {/* Card details */}
+                    <div className="text-center">
+                      <h3 className={cn(
+                        "text-lg font-bold mb-1 uppercase tracking-wider",
+                        isSelected ? "gradient-text" : "text-foreground group-hover:gradient-text"
+                      )}>
+                        {tier.name}
+                      </h3>
+                      <p className={cn(
+                        "text-sm font-mono font-semibold",
+                        isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                      )}>
+                        {tier.price}{boosterActive && selectedTier.id === tier.id ? ` + ${boosterCost}` : ''} XRD
+                      </p>
+                    </div>
+
+                    {/* Rarity indicator */}
+                    <div className={cn(
+                      "absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
+                      `bg-gradient-to-r ${config.gradient} text-white shadow-lg`,
+                      isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}>
+                      {tier.rarity}
+                    </div>
+
+                    {/* Selection indicator */}
+                    {isSelected && (
+                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                        <div className="w-2 h-2 bg-white rounded-full" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Holographic border effect */}
+                  <div className={cn(
+                    "absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300",
+                    "bg-gradient-to-r from-transparent via-white/10 to-transparent",
+                    isSelected ? "opacity-100" : "group-hover:opacity-100"
+                  )} />
+                </Card>
+              );
+            })}
+          </div>
         </div>
 
         {/* Booster Toggle */}
@@ -434,7 +548,7 @@ const Open = () => {
             />
           </div>
         </div>
-        </div>
+      </div>
 
         {/* CTA Button */}
         <div className="mt-10 flex justify-center">
