@@ -3,7 +3,7 @@ import { RadixDappToolkit, RadixNetwork } from '@radixdlt/radix-dapp-toolkit';
 // Stokenet configuration
 export const STOKENET_CONFIG = {
   networkId: RadixNetwork.Stokenet, // Use the correct enum
-  dAppDefinitionAddress: 'account_tdx_2_128evrrq8t3w8crgpga9nqjy4p0lr0yy8t33jvqsm9rcp3r9xz8',
+  dAppDefinitionAddress: 'account_tdx_2_129vr3rwyz7gnwf35kkuxvx0fs4hkz0n5hem9utaejqra3sxf0m5wej',
   rpcUrl: 'https://stokenet.radixdlt.com',
   gatewayUrl: 'https://stokenet-gateway.radixdlt.com'
 };
