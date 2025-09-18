@@ -548,7 +548,6 @@ const Open = () => {
             />
           </div>
         </div>
-      </div>
 
         {/* CTA Button */}
         <div className="mt-10 flex justify-center">
