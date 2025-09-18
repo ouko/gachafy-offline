@@ -1,11 +1,11 @@
 // Enhanced service worker with offline request queuing
-const CACHE_NAME = 'gachafi-poc-v2';
+const CACHE_NAME = 'gachafi-poc-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/index.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 // Install event - cache static assets

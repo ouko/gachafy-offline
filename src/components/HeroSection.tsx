@@ -33,7 +33,11 @@ const HeroSection = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-          <Button size="lg" className="gradient-hero text-white border-0 shadow-glow transition-smooth hover:shadow-glow hover:scale-105">
+          <Button 
+            size="lg" 
+            className="gradient-hero text-white border-0 shadow-glow transition-smooth hover:shadow-glow hover:scale-105"
+            onClick={() => window.location.href = '/open'}
+          >
             Launch App
           </Button>
           <Button variant="outline" size="lg" className="border-primary/50 text-primary hover:bg-primary/10 transition-smooth">
