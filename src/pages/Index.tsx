@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import HeroSection from "@/components/HeroSection";
+import AudioControls from "@/components/AudioControls";
 import { registerSW, setupPWAInstall } from "@/utils/pwa";
 
 const Index = () => {
@@ -14,6 +15,7 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background">
       <HeroSection />
+      <AudioControls />
     </main>
   );
 };

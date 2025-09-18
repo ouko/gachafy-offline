@@ -12,6 +12,8 @@ import { NotificationDemo } from "@/components/NotificationDemo";
 import { BridgeModal } from "@/components/BridgeModal";
 import { Switch } from "@/components/ui/switch";
 import { useBooster } from "@/hooks/useBooster";
+import { useAudio } from "@/hooks/useAudio";
+import AudioControls from "@/components/AudioControls";
 
 interface Tier {
   id: string;
@@ -65,6 +67,7 @@ const Open = () => {
   const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
   const { streak, isTodayDone, streakMultiplier, markTodayComplete } = useStreak();
   const { isActive: boosterActive, cost: boosterCost, description: boosterDescription, toggleBooster } = useBooster();
+  const { playOpenCapsule, playRevealRare, playRevealCommon, playButtonClick, playButtonHover, playSuccess, playError } = useAudio();
   const [balance, setBalance] = useState(0); // Live XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
@@ -221,12 +224,15 @@ const Open = () => {
   };
 
   const openBox = async () => {
+    playButtonClick();
+    
     if (!isConnected) {
       await connectWallet();
       return;
     }
 
     if (balance < selectedTier.price) {
+      playError();
       toast({
         title: "Insufficient Funds",
         description: `Not enough XRD. Need ${selectedTier.price + (boosterActive ? boosterCost : 0)} XRD`,
@@ -243,6 +249,8 @@ const Open = () => {
 
     try {
       setIsLoading(true);
+      playOpenCapsule(); // Play opening sound effect
+      
       // Calculate total cost including booster
       const totalCost = selectedTier.price + (boosterActive ? boosterCost : 0);
       // Deduct balance immediately for UX
@@ -253,6 +261,7 @@ const Open = () => {
         const demoTxHash = `demo_tx_${Date.now()}_${selectedTier.id}${boosterActive ? '_boosted' : ''}`;
         setPendingTx(demoTxHash);
         
+        playSuccess(); // Play success sound for demo
         toast({
           title: "Demo Transaction Submitted",
           description: `TX: ${shortenTxHash(demoTxHash)} (simulation)`,
@@ -446,7 +455,11 @@ const Open = () => {
                       ? `border-primary/70 ${config.borderGlow} transform scale-115 -translate-y-3 border-2` 
                       : "border-white/20 hover:border-primary/60 border"
                   )}
-                  onClick={() => setSelectedTier(tier)}
+                  onClick={() => {
+                    playButtonClick();
+                    setSelectedTier(tier);
+                  }}
+                  onMouseEnter={() => playButtonHover()}
                 >
                   {/* Animated background particles */}
                   <div className="absolute inset-0 overflow-hidden">
@@ -595,6 +608,7 @@ const Open = () => {
             onClick={openBox}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onMouseEnter={() => playButtonHover()}
           >
             {isProcessing ? (
               <div className="flex items-center gap-3">
@@ -677,6 +691,9 @@ const Open = () => {
         onClose={() => setIsBridgeModalOpen(false)}
         onSuccess={handleBridgeSuccess}
       />
+      
+      {/* Audio Controls */}
+      <AudioControls />
     </main>
   );
 };
