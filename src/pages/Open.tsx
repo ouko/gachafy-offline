@@ -67,7 +67,7 @@ const Open = () => {
   const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
   const { streak, isTodayDone, streakMultiplier, markTodayComplete } = useStreak();
   const { isActive: boosterActive, cost: boosterCost, description: boosterDescription, toggleBooster } = useBooster();
-  const { playOpenCapsule, playRevealRare, playRevealCommon, playButtonClick, playButtonHover, playSuccess, playError } = useAudio();
+  const { playOpenCapsule, playRevealRare, playRevealCommon, playRevealEpic, playButtonClick, playButtonHover, playSuccess, playError } = useAudio();
   const [balance, setBalance] = useState(0); // Live XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
@@ -249,7 +249,7 @@ const Open = () => {
 
     try {
       setIsLoading(true);
-      playOpenCapsule(); // Play opening sound effect
+      playOpenCapsule(selectedTier.rarity); // Play tier-specific opening sound
       
       // Calculate total cost including booster
       const totalCost = selectedTier.price + (boosterActive ? boosterCost : 0);
