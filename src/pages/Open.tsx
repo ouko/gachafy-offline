@@ -4,8 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { useStreak } from "@/hooks/useStreak";
 import { useToast } from "@/hooks/use-toast";
 import { radixService, shortenTxHash } from "@/lib/radix";
+import { Flame } from "lucide-react";
 
 interface Tier {
   id: string;
@@ -30,6 +32,7 @@ const Open = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
+  const { streak, isTodayDone, streakMultiplier, markTodayComplete } = useStreak();
   const [balance, setBalance] = useState(0); // Live XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
@@ -218,20 +221,30 @@ const Open = () => {
           description: `TX: ${shortenTxHash(demoTxHash)} (simulation)`,
         });
         
+        // Mark today as complete for streak
+        if (!isTodayDone) {
+          markTodayComplete();
+        }
+        
         // Simulate processing time and auto-complete
         setTimeout(() => {
           navigate("/reveal", { state: { tier: selectedTier, txHash: demoTxHash } });
           setPendingTx("");
         }, 3000);
       } else {
-        // Call Radix Stokenet to mint badge NFT
+        // Call Radix Stokenet to mint badge NFT with streak multiplier
         const txHash = await radixService.mintGachaBadge(
           walletAddress, 
           selectedTier.id, 
-          selectedTier.price
+          selectedTier.price * streakMultiplier // Apply streak multiplier
         );
         
         setPendingTx(txHash);
+        
+        // Mark today as complete for streak
+        if (!isTodayDone) {
+          markTodayComplete();
+        }
         
         toast({
           title: "Transaction Submitted",
@@ -277,6 +290,15 @@ const Open = () => {
           <span className="text-sm font-semibold text-primary">
             {balance.toFixed(3)} XRD
           </span>
+          
+          {/* Streak Pill */}
+          {streak > 0 && (
+            <div className="flex items-center gap-1 bg-orange-500 text-white px-2 py-1 rounded-full">
+              <Flame size={12} />
+              <span className="text-xs font-medium">Day-{streak}</span>
+            </div>
+          )}
+          
           {!isConnected && (
             <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
               NOT CONNECTED

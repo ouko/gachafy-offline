@@ -1,14 +1,12 @@
 import { useGachaFi } from '@/contexts/GachaFiContext';
 
 export const useStreak = () => {
-  const { streak, incrementStreak, resetStreak } = useGachaFi();
+  const { streak, markTodayComplete } = useGachaFi();
 
   return {
-    current: streak.current,
-    bestEver: streak.bestEver,
-    lastOpenDate: streak.lastOpenDate,
-    multiplier: streak.multiplier,
-    incrementStreak,
-    resetStreak,
+    streak: streak.current,
+    isTodayDone: streak.isTodayDone,
+    streakMultiplier: streak.streakMultiplier,
+    markTodayComplete,
   };
 };

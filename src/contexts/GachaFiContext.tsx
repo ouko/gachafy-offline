@@ -13,9 +13,8 @@ interface Wallet {
 
 interface Streak {
   current: number;
-  bestEver: number;
-  lastOpenDate: string | null;
-  multiplier: number;
+  isTodayDone: boolean;
+  streakMultiplier: number;
 }
 
 interface Booster {
@@ -47,8 +46,7 @@ interface GachaFiContextType {
   // Actions
   connectWallet: () => Promise<void>;
   updateBalance: (amount: number) => void;
-  incrementStreak: () => void;
-  resetStreak: () => void;
+  markTodayComplete: () => void;
   activateBooster: (type: 'luck' | 'xp' | 'rewards', multiplier: number, duration: number) => void;
   deactivateBooster: () => void;
 }
@@ -73,9 +71,8 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
   // Streak state
   const [streak, setStreak] = useState<Streak>({
     current: 0,
-    bestEver: 0,
-    lastOpenDate: null,
-    multiplier: 1,
+    isTodayDone: false,
+    streakMultiplier: 1,
   });
 
   // Booster state
@@ -89,12 +86,68 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
   // Offline queue
   const offlineQueueHook = useOfflineQueue();
 
-  // Initialize wallet in demo mode
+  // Streak bitmap utilities
+  const getStreakMap = (): number[] => {
+    try {
+      const stored = localStorage.getItem('streakMap');
+      return stored ? JSON.parse(stored) : [0, 0, 0, 0, 0, 0, 0]; // 7 days
+    } catch {
+      return [0, 0, 0, 0, 0, 0, 0];
+    }
+  };
+
+  const setStreakMap = (bitmap: number[]) => {
+    localStorage.setItem('streakMap', JSON.stringify(bitmap));
+  };
+
+  const getTodayIndex = (): number => {
+    const today = new Date();
+    return today.getUTCDay(); // 0 = Sunday, 6 = Saturday
+  };
+
+  const calculateStreak = (bitmap: number[], todayIndex: number): number => {
+    let streakCount = 0;
+    
+    // Check backwards from today
+    for (let i = 0; i < 7; i++) {
+      const dayIndex = (todayIndex - i + 7) % 7;
+      if (bitmap[dayIndex] === 1) {
+        streakCount++;
+      } else {
+        break; // Streak broken
+      }
+    }
+    
+    return Math.min(streakCount, 7); // Max streak is 7 days
+  };
+
+  const updateStreakState = () => {
+    const bitmap = getStreakMap();
+    const todayIndex = getTodayIndex();
+    const yesterdayIndex = (todayIndex - 1 + 7) % 7;
+    
+    const isTodayDone = bitmap[todayIndex] === 1;
+    const current = calculateStreak(bitmap, todayIndex);
+    
+    // Streak multiplier: 1x for days 1-6, 3x for day 7
+    const streakMultiplier = current === 7 ? 3 : 1;
+    
+    setStreak({
+      current,
+      isTodayDone,
+      streakMultiplier,
+    });
+  };
+
+  // Initialize wallet and streak
   useEffect(() => {
     const initWallet = async () => {
       try {
         console.log('GachaFi: Initializing in demo mode...');
         await radixService.initialize();
+        
+        // Update streak state on init
+        updateStreakState();
         
         // Try auto-connect, but fallback to demo mode
         try {
@@ -214,26 +267,16 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     }));
   };
 
-  const incrementStreak = () => {
-    const today = new Date().toISOString().split('T')[0];
-    setStreak(prev => {
-      const newCurrent = prev.current + 1;
-      return {
-        ...prev,
-        current: newCurrent,
-        bestEver: Math.max(prev.bestEver, newCurrent),
-        lastOpenDate: today,
-        multiplier: Math.min(1 + (newCurrent - 1) * 0.1, 3), // Max 3x multiplier
-      };
-    });
-  };
-
-  const resetStreak = () => {
-    setStreak(prev => ({
-      ...prev,
-      current: 0,
-      multiplier: 1,
-    }));
+  const markTodayComplete = () => {
+    const bitmap = getStreakMap();
+    const todayIndex = getTodayIndex();
+    
+    // Mark today as complete
+    bitmap[todayIndex] = 1;
+    setStreakMap(bitmap);
+    
+    // Update streak state
+    updateStreakState();
   };
 
   const activateBooster = (type: 'luck' | 'xp' | 'rewards', multiplier: number, duration: number) => {
@@ -262,8 +305,7 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     offlineQueue: offlineQueueHook,
     connectWallet,
     updateBalance,
-    incrementStreak,
-    resetStreak,
+    markTodayComplete,
     activateBooster,
     deactivateBooster,
   };
