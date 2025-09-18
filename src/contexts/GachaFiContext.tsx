@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { radixService } from '@/lib/radix';
+import { oneSignalService } from '@/lib/oneSignal';
 
 interface Wallet {
   address: string;
@@ -145,6 +146,7 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
       try {
         console.log('GachaFi: Initializing in demo mode...');
         await radixService.initialize();
+        await oneSignalService.initialize();
         
         // Update streak state on init
         updateStreakState();
@@ -220,7 +222,7 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     try {
       if (wallet.isDemoMode) {
         // Demo connection
-        setTimeout(() => {
+        setTimeout(async () => {
           const demoAddress = "account_tdx_2_demo_simulation_12345678";
           setWallet(prev => ({
             ...prev,
@@ -229,6 +231,17 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
             balance: 35.5,
             isLoading: false,
           }));
+          
+          // Request push notification permission on first connect
+          try {
+            const hasPermission = await oneSignalService.isSubscribed();
+            if (!hasPermission) {
+              console.log('Requesting push notification permission...');
+              await oneSignalService.requestPermission();
+            }
+          } catch (error) {
+            console.error('Failed to request push permission:', error);
+          }
         }, 1000);
         return;
       }
@@ -242,6 +255,17 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
           isDemoMode: false,
           isLoading: false,
         }));
+        
+        // Request push notification permission on first connect
+        try {
+          const hasPermission = await oneSignalService.isSubscribed();
+          if (!hasPermission) {
+            console.log('Requesting push notification permission...');
+            await oneSignalService.requestPermission();
+          }
+        } catch (error) {
+          console.error('Failed to request push permission:', error);
+        }
       } else {
         // Fallback to demo mode
         setWallet(prev => ({
@@ -274,6 +298,10 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     // Mark today as complete
     bitmap[todayIndex] = 1;
     setStreakMap(bitmap);
+    
+    // Store last open date for push notification logic
+    const todayKey = new Date().toISOString().split('T')[0];
+    localStorage.setItem('lastOpenDate', todayKey);
     
     // Update streak state
     updateStreakState();

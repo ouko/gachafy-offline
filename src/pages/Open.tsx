@@ -8,6 +8,7 @@ import { useStreak } from "@/hooks/useStreak";
 import { useToast } from "@/hooks/use-toast";
 import { radixService, shortenTxHash } from "@/lib/radix";
 import { Flame } from "lucide-react";
+import { NotificationDemo } from "@/components/NotificationDemo";
 
 interface Tier {
   id: string;
@@ -418,6 +419,13 @@ const Open = () => {
           )}
         </div>
       </div>
+
+      {/* Demo Notification Panel (only visible in demo mode) */}
+      {isDemoMode && (
+        <div className="mt-8">
+          <NotificationDemo />
+        </div>
+      )}
     </main>
   );
 };
