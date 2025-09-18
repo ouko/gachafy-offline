@@ -2,11 +2,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import mythicBadge from "@/assets/mythic-badge.png";
+import { shortenTxHash } from "@/lib/radix";
 
 const Reveal = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const tier = location.state?.tier;
+  const txHash = location.state?.txHash;
   const [spCount, setSpCount] = useState(0);
   const [showBadge, setShowBadge] = useState(false);
 
@@ -88,6 +90,13 @@ const Reveal = () => {
           SP Earned
         </div>
       </div>
+
+      {/* Transaction Hash Pill */}
+      {txHash && (
+        <div className="mb-4 bg-white/10 text-white px-4 py-2 rounded-full text-sm font-mono">
+          TX: {shortenTxHash(txHash)}
+        </div>
+      )}
 
       {/* Share Button */}
       <Button 

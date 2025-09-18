@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { useToast } from "@/hooks/use-toast";
+import { radixService, shortenTxHash } from "@/lib/radix";
 
 interface Tier {
   id: string;
@@ -29,33 +30,155 @@ const Open = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
-  const [balance, setBalance] = useState(247.5); // Mock XRD balance
+  const [balance, setBalance] = useState(0); // Live XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
+  const [walletAddress, setWalletAddress] = useState<string>("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [pendingTx, setPendingTx] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Poll balance every 5 seconds
+  // Initialize Radix connection
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Mock balance fluctuation
-      setBalance(prev => prev + (Math.random() - 0.5) * 2);
-    }, 5000);
-
-    return () => clearInterval(interval);
+    const initRadix = async () => {
+      try {
+        await radixService.initialize();
+        // Try to auto-connect if previously connected
+        const result = await radixService.connectWallet();
+        if (result?.accounts?.length > 0) {
+          setWalletAddress(result.accounts[0].address);
+          setIsConnected(true);
+        }
+      } catch (error) {
+        console.log('No wallet connected yet');
+      }
+    };
+    
+    initRadix();
   }, []);
 
+  // Poll balance every 5 seconds (live RPC)
+  useEffect(() => {
+    if (!isConnected || !walletAddress) return;
+
+    const fetchBalance = async () => {
+      try {
+        const liveBalance = await radixService.getBalance(walletAddress);
+        setBalance(liveBalance);
+      } catch (error) {
+        console.error('Error fetching balance:', error);
+      }
+    };
+
+    fetchBalance(); // Initial fetch
+    const interval = setInterval(fetchBalance, 5000);
+
+    return () => clearInterval(interval);
+  }, [isConnected, walletAddress]);
+
+  // Poll pending transaction status
+  useEffect(() => {
+    if (!pendingTx) return;
+
+    const checkTxStatus = async () => {
+      try {
+        const status = await radixService.getTransactionStatus(pendingTx);
+        if (status === 'success') {
+          navigate("/reveal", { state: { tier: selectedTier, txHash: pendingTx } });
+          setPendingTx("");
+        } else if (status === 'failed') {
+          toast({
+            title: "Transaction Failed",
+            description: "Not enough XRD or transaction rejected",
+            variant: "destructive",
+          });
+          // Refund the balance
+          setBalance(prev => prev + selectedTier.price);
+          setPendingTx("");
+        }
+      } catch (error) {
+        console.error('Error checking transaction status:', error);
+      }
+    };
+
+    const interval = setInterval(checkTxStatus, 3000);
+    return () => clearInterval(interval);
+  }, [pendingTx, selectedTier, navigate, toast]);
+
+  const connectWallet = async () => {
+    try {
+      setIsLoading(true);
+      const result = await radixService.connectWallet();
+      if (result?.accounts?.length > 0) {
+        setWalletAddress(result.accounts[0].address);
+        setIsConnected(true);
+        toast({
+          title: "Wallet Connected",
+          description: `Connected to ${result.accounts[0].address.slice(0, 10)}...`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect wallet",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openBox = async () => {
-    if (balance < selectedTier.price) return;
+    if (!isConnected) {
+      await connectWallet();
+      return;
+    }
+
+    if (balance < selectedTier.price) {
+      toast({
+        title: "Insufficient Funds",
+        description: `Not enough XRD. Need ${selectedTier.price} XRD`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!isOnline) {
       // Queue request for offline processing
       await queueMintRequest(selectedTier);
-      setBalance(prev => prev - selectedTier.price);
       return;
     }
 
-    // Online processing
-    setBalance(prev => prev - selectedTier.price);
-    navigate("/reveal", { state: { tier: selectedTier } });
+    try {
+      setIsLoading(true);
+      // Deduct balance immediately for UX
+      setBalance(prev => prev - selectedTier.price);
+      
+      // Call Radix Stokenet to mint badge NFT
+      const txHash = await radixService.mintGachaBadge(
+        walletAddress, 
+        selectedTier.id, 
+        selectedTier.price
+      );
+      
+      setPendingTx(txHash);
+      
+      toast({
+        title: "Transaction Submitted",
+        description: `TX: ${shortenTxHash(txHash)}`,
+      });
+    } catch (error) {
+      console.error('Mint failed:', error);
+      // Revert balance on failure
+      setBalance(prev => prev + selectedTier.price);
+      toast({
+        title: "Transaction Failed",
+        description: "Failed to submit transaction",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -73,6 +196,7 @@ const Open = () => {
   };
 
   const canAfford = balance >= selectedTier.price;
+  const isProcessing = isLoading || !!pendingTx;
 
   return (
     <main className="min-h-screen bg-background p-4 flex flex-col">
@@ -80,15 +204,25 @@ const Open = () => {
       <div className="flex justify-center mb-8">
         <div className="bg-card rounded-full px-6 py-2 shadow-card border border-border flex items-center gap-3">
           <span className="text-sm font-semibold text-primary">
-            {balance.toFixed(1)} XRD
+            {balance.toFixed(3)} XRD
           </span>
+          {!isConnected && (
+            <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+              NOT CONNECTED
+            </span>
+          )}
           {!isOnline && (
             <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
               OFFLINE
             </span>
           )}
-          {queuedRequests.length > 0 && (
+          {pendingTx && (
             <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">
+              TX: {shortenTxHash(pendingTx)}
+            </span>
+          )}
+          {queuedRequests.length > 0 && (
+            <span className="text-xs bg-purple-500 text-white px-2 py-1 rounded-full">
               {queuedRequests.length} queued
             </span>
           )}
@@ -128,27 +262,49 @@ const Open = () => {
             size="lg"
             className={cn(
               "w-[300px] h-[56px] text-lg font-semibold transition-smooth",
-              canAfford 
-                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow" 
-                : "bg-muted text-muted-foreground cursor-not-allowed"
+              (!isConnected || isProcessing) 
+                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-glow"
+                : canAfford 
+                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow" 
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
-            disabled={!canAfford}
+            disabled={isProcessing || (!isConnected ? false : !canAfford)}
             onClick={openBox}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            {!isOnline ? 'Queue' : 'Open'} {selectedTier.name} {selectedTier.price} XRD
+            {!isConnected 
+              ? 'Connect Wallet' 
+              : isProcessing 
+                ? 'Processing...' 
+                : !isOnline 
+                  ? `Queue ${selectedTier.name} ${selectedTier.price} XRD`
+                  : `Open ${selectedTier.name} ${selectedTier.price} XRD`
+            }
           </Button>
         </div>
 
         {/* Status Messages */}
         <div className="text-center mt-4 space-y-2">
           <p className="text-muted-foreground text-sm">
-            Tap or swipe up to {!isOnline ? 'queue' : 'open'}
+            {!isConnected 
+              ? 'Connect your Radix wallet to start'
+              : `Tap or swipe up to ${!isOnline ? 'queue' : 'open'}`
+            }
           </p>
           {!isOnline && (
             <p className="text-orange-400 text-xs">
               Offline mode - requests will be processed when online
+            </p>
+          )}
+          {pendingTx && (
+            <p className="text-blue-400 text-xs">
+              Transaction pending on Stokenet...
+            </p>
+          )}
+          {isConnected && walletAddress && (
+            <p className="text-green-400 text-xs">
+              Connected: {walletAddress.slice(0, 20)}...
             </p>
           )}
         </div>
