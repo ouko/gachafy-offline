@@ -1,14 +1,12 @@
 import { useGachaFi } from '@/contexts/GachaFiContext';
 
 export const useBooster = () => {
-  const { booster, activateBooster, deactivateBooster } = useGachaFi();
+  const { booster, toggleBooster } = useGachaFi();
 
   return {
     isActive: booster.isActive,
-    multiplier: booster.multiplier,
-    expiresAt: booster.expiresAt,
-    type: booster.type,
-    activateBooster,
-    deactivateBooster,
+    cost: booster.cost,
+    description: booster.description,
+    toggleBooster,
   };
 };

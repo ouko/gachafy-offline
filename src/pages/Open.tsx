@@ -7,8 +7,10 @@ import { useOfflineQueue } from "@/hooks/useOfflineQueue";
 import { useStreak } from "@/hooks/useStreak";
 import { useToast } from "@/hooks/use-toast";
 import { radixService, shortenTxHash } from "@/lib/radix";
-import { Flame } from "lucide-react";
+import { Flame, Zap } from "lucide-react";
 import { NotificationDemo } from "@/components/NotificationDemo";
+import { Switch } from "@/components/ui/switch";
+import { useBooster } from "@/hooks/useBooster";
 
 interface Tier {
   id: string;
@@ -34,6 +36,7 @@ const Open = () => {
   const { toast } = useToast();
   const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
   const { streak, isTodayDone, streakMultiplier, markTodayComplete } = useStreak();
+  const { isActive: boosterActive, cost: boosterCost, description: boosterDescription, toggleBooster } = useBooster();
   const [balance, setBalance] = useState(0); // Live XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
@@ -195,7 +198,7 @@ const Open = () => {
     if (balance < selectedTier.price) {
       toast({
         title: "Insufficient Funds",
-        description: `Not enough XRD. Need ${selectedTier.price} XRD`,
+        description: `Not enough XRD. Need ${selectedTier.price + (boosterActive ? boosterCost : 0)} XRD`,
         variant: "destructive",
       });
       return;
@@ -209,12 +212,14 @@ const Open = () => {
 
     try {
       setIsLoading(true);
+      // Calculate total cost including booster
+      const totalCost = selectedTier.price + (boosterActive ? boosterCost : 0);
       // Deduct balance immediately for UX
-      setBalance(prev => prev - selectedTier.price);
+      setBalance(prev => prev - totalCost);
       
       if (isDemoMode) {
-        // Demo mode: simulate transaction
-        const demoTxHash = `demo_tx_${Date.now()}_${selectedTier.id}`;
+        // Demo mode: simulate transaction with booster
+        const demoTxHash = `demo_tx_${Date.now()}_${selectedTier.id}${boosterActive ? '_boosted' : ''}`;
         setPendingTx(demoTxHash);
         
         toast({
@@ -237,8 +242,11 @@ const Open = () => {
         const txHash = await radixService.mintGachaBadge(
           walletAddress, 
           selectedTier.id, 
-          selectedTier.price * streakMultiplier // Apply streak multiplier
+          totalCost * streakMultiplier // Apply streak multiplier to total cost
         );
+        
+        // Log booster state for future use
+        console.log('Mint with booster:', { booster: boosterActive, totalCost });
         
         setPendingTx(txHash);
         
@@ -255,7 +263,8 @@ const Open = () => {
     } catch (error) {
       console.error('Mint failed:', error);
       // Revert balance on failure
-      setBalance(prev => prev + selectedTier.price);
+      const totalCost = selectedTier.price + (boosterActive ? boosterCost : 0);
+      setBalance(prev => prev + totalCost);
       toast({
         title: "Transaction Failed",
         description: "Failed to submit transaction",
@@ -280,7 +289,8 @@ const Open = () => {
     }
   };
 
-  const canAfford = balance >= selectedTier.price;
+  const totalPrice = selectedTier.price + (boosterActive ? boosterCost : 0);
+  const canAfford = balance >= totalPrice;
   const isProcessing = isLoading || !!pendingTx;
 
   return (
@@ -349,14 +359,29 @@ const Open = () => {
                   rarityColors[tier.rarity]
                 )} />
                 <h3 className="text-sm font-semibold text-foreground">{tier.name}</h3>
-                <p className="text-xs text-muted-foreground">{tier.price} XRD</p>
+                <p className="text-xs text-muted-foreground">
+                  {tier.price}{boosterActive && selectedTier.id === tier.id ? ` + ${boosterCost}` : ''} XRD
+                </p>
               </Card>
             ))}
+        </div>
+
+        {/* Booster Toggle */}
+        <div className="mt-6 flex justify-center">
+          <div className="flex items-center space-x-3 bg-card rounded-full px-4 py-2 border border-border">
+            <Zap className={cn("w-4 h-4", boosterActive ? "text-yellow-500" : "text-muted-foreground")} />
+            <span className="text-sm font-medium">{boosterDescription}</span>
+            <Switch 
+              checked={boosterActive}
+              onCheckedChange={toggleBooster}
+              className="data-[state=checked]:bg-yellow-500"
+            />
           </div>
+        </div>
         </div>
 
         {/* CTA Button */}
-        <div className="mt-12 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <Button
             size="lg"
             className={cn(
@@ -377,8 +402,8 @@ const Open = () => {
               : isProcessing 
                 ? 'Processing...' 
                 : !isOnline 
-                  ? `Queue ${selectedTier.name} ${selectedTier.price} XRD`
-                  : `Open ${selectedTier.name} ${selectedTier.price} XRD`
+                  ? `Queue ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
+                  : `Open ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
             }
           </Button>
         </div>

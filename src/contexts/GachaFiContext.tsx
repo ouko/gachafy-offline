@@ -20,9 +20,8 @@ interface Streak {
 
 interface Booster {
   isActive: boolean;
-  multiplier: number;
-  expiresAt: string | null;
-  type: 'luck' | 'xp' | 'rewards' | null;
+  cost: number;
+  description: string;
 }
 
 interface GachaFiContextType {
@@ -48,8 +47,7 @@ interface GachaFiContextType {
   connectWallet: () => Promise<void>;
   updateBalance: (amount: number) => void;
   markTodayComplete: () => void;
-  activateBooster: (type: 'luck' | 'xp' | 'rewards', multiplier: number, duration: number) => void;
-  deactivateBooster: () => void;
+  toggleBooster: () => void;
 }
 
 const GachaFiContext = createContext<GachaFiContextType | undefined>(undefined);
@@ -76,12 +74,11 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     streakMultiplier: 1,
   });
 
-  // Booster state
+  // Booster state (resets each session)
   const [booster, setBooster] = useState<Booster>({
     isActive: false,
-    multiplier: 1,
-    expiresAt: null,
-    type: null,
+    cost: 5,
+    description: "+5 XRD boost",
   });
 
   // Offline queue
@@ -201,19 +198,14 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     };
   }, [wallet.isConnected, wallet.address, wallet.isDemoMode]);
 
-  // Check booster expiration
+  // Check booster session reset (no persistence across sessions)
   useEffect(() => {
-    if (!booster.isActive || !booster.expiresAt) return;
-
-    const checkExpiration = () => {
-      if (new Date() > new Date(booster.expiresAt!)) {
-        deactivateBooster();
-      }
-    };
-
-    const interval = setInterval(checkExpiration, 1000);
-    return () => clearInterval(interval);
-  }, [booster.isActive, booster.expiresAt]);
+    // Booster state resets on each new session (component mount)
+    setBooster(prev => ({
+      ...prev,
+      isActive: false,
+    }));
+  }, []);
 
   // Actions
   const connectWallet = async () => {
@@ -307,23 +299,11 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     updateStreakState();
   };
 
-  const activateBooster = (type: 'luck' | 'xp' | 'rewards', multiplier: number, duration: number) => {
-    const expiresAt = new Date(Date.now() + duration * 1000).toISOString();
-    setBooster({
-      isActive: true,
-      multiplier,
-      expiresAt,
-      type,
-    });
-  };
-
-  const deactivateBooster = () => {
-    setBooster({
-      isActive: false,
-      multiplier: 1,
-      expiresAt: null,
-      type: null,
-    });
+  const toggleBooster = () => {
+    setBooster(prev => ({
+      ...prev,
+      isActive: !prev.isActive,
+    }));
   };
 
   const contextValue: GachaFiContextType = {
@@ -334,8 +314,7 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     connectWallet,
     updateBalance,
     markTodayComplete,
-    activateBooster,
-    deactivateBooster,
+    toggleBooster,
   };
 
   return (
