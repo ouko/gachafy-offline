@@ -17,7 +17,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onComplete, 600);
-    }, 4000);
+    }, 2200);
 
     return () => {
       clearTimeout(timer);
