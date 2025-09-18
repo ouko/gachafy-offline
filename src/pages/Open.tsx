@@ -42,15 +42,24 @@ const Open = () => {
   useEffect(() => {
     const initRadix = async () => {
       try {
+        console.log('Initializing Radix service...');
         await radixService.initialize();
+        console.log('Radix service initialized');
+        
         // Try to auto-connect if previously connected
+        console.log('Attempting auto-connect...');
         const result = await radixService.connectWallet();
+        console.log('Auto-connect result:', result);
+        
         if (result?.accounts?.length > 0) {
           setWalletAddress(result.accounts[0].address);
           setIsConnected(true);
+          console.log('Auto-connected to wallet:', result.accounts[0].address);
+        } else {
+          console.log('No auto-connection available');
         }
       } catch (error) {
-        console.log('No wallet connected yet');
+        console.error('Radix initialization error:', error);
       }
     };
     
@@ -108,16 +117,28 @@ const Open = () => {
   const connectWallet = async () => {
     try {
       setIsLoading(true);
+      console.log('Manual wallet connection attempt...');
       const result = await radixService.connectWallet();
+      console.log('Manual connection result:', result);
+      
       if (result?.accounts?.length > 0) {
         setWalletAddress(result.accounts[0].address);
         setIsConnected(true);
+        console.log('Successfully connected wallet:', result.accounts[0].address);
         toast({
           title: "Wallet Connected",
           description: `Connected to ${result.accounts[0].address.slice(0, 10)}...`,
         });
+      } else {
+        console.error('No accounts returned from wallet connection');
+        toast({
+          title: "Connection Failed", 
+          description: "No wallet found or user cancelled",
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      console.error('Manual wallet connection error:', error);
       toast({
         title: "Connection Failed",
         description: "Failed to connect wallet",
@@ -305,6 +326,11 @@ const Open = () => {
           {isConnected && walletAddress && (
             <p className="text-green-400 text-xs">
               Connected: {walletAddress.slice(0, 20)}...
+            </p>
+          )}
+          {!isConnected && (
+            <p className="text-yellow-400 text-xs">
+              Make sure you have Radix Wallet installed and connected to Stokenet
             </p>
           )}
         </div>

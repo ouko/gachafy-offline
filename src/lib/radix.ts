@@ -1,8 +1,8 @@
-import { RadixDappToolkit } from '@radixdlt/radix-dapp-toolkit';
+import { RadixDappToolkit, RadixNetwork } from '@radixdlt/radix-dapp-toolkit';
 
 // Stokenet configuration
 export const STOKENET_CONFIG = {
-  networkId: 2, // Stokenet
+  networkId: RadixNetwork.Stokenet, // Use the correct enum
   dAppDefinitionAddress: 'account_tdx_2_128evrrq8t3w8crgpga9nqjy4p0lr0yy8t33jvqsm9rcp3r9xz8',
   rpcUrl: 'https://stokenet.radixdlt.com',
   gatewayUrl: 'https://stokenet-gateway.radixdlt.com'
@@ -22,24 +22,35 @@ class RadixService {
   async initialize() {
     if (this.initialized) return;
 
-    this.rdt = RadixDappToolkit({
-      dAppDefinitionAddress: STOKENET_CONFIG.dAppDefinitionAddress,
-      networkId: STOKENET_CONFIG.networkId,
-      applicationName: 'GachaFi',
-      applicationVersion: '1.0.0',
-    });
+    try {
+      console.log('Initializing Radix DApp Toolkit...');
+      this.rdt = RadixDappToolkit({
+        dAppDefinitionAddress: STOKENET_CONFIG.dAppDefinitionAddress,
+        networkId: STOKENET_CONFIG.networkId,
+        applicationName: 'GachaFi',
+        applicationVersion: '1.0.0',
+      });
 
-    this.initialized = true;
+      console.log('Radix DApp Toolkit initialized successfully');
+      this.initialized = true;
+    } catch (error) {
+      console.error('Failed to initialize Radix DApp Toolkit:', error);
+      throw error;
+    }
   }
 
   async connectWallet(): Promise<any> {
     if (!this.rdt) await this.initialize();
     
     try {
+      console.log('Attempting wallet connection...');
+      
+      // Request login with accounts
       const result = await this.rdt!.walletApi.setRequestData({
         accounts: { quantifier: 'atLeast', quantity: 1 },
       });
 
+      console.log('Wallet connection result:', result);
       return result;
     } catch (error) {
       console.error('Wallet connection error:', error);
