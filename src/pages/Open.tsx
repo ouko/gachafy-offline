@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { useToast } from "@/hooks/use-toast";
 
 interface Tier {
   id: string;
@@ -25,6 +27,8 @@ const rarityColors = {
 
 const Open = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isOnline, queuedRequests, queueMintRequest } = useOfflineQueue();
   const [balance, setBalance] = useState(247.5); // Mock XRD balance
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default to Epic
   const [startY, setStartY] = useState(0);
@@ -39,11 +43,19 @@ const Open = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const openBox = () => {
-    if (balance >= selectedTier.price) {
+  const openBox = async () => {
+    if (balance < selectedTier.price) return;
+
+    if (!isOnline) {
+      // Queue request for offline processing
+      await queueMintRequest(selectedTier);
       setBalance(prev => prev - selectedTier.price);
-      navigate("/reveal", { state: { tier: selectedTier } });
+      return;
     }
+
+    // Online processing
+    setBalance(prev => prev - selectedTier.price);
+    navigate("/reveal", { state: { tier: selectedTier } });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -66,10 +78,20 @@ const Open = () => {
     <main className="min-h-screen bg-background p-4 flex flex-col">
       {/* Top Balance Bar */}
       <div className="flex justify-center mb-8">
-        <div className="bg-card rounded-full px-6 py-2 shadow-card border border-border">
+        <div className="bg-card rounded-full px-6 py-2 shadow-card border border-border flex items-center gap-3">
           <span className="text-sm font-semibold text-primary">
             {balance.toFixed(1)} XRD
           </span>
+          {!isOnline && (
+            <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
+              OFFLINE
+            </span>
+          )}
+          {queuedRequests.length > 0 && (
+            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">
+              {queuedRequests.length} queued
+            </span>
+          )}
         </div>
       </div>
 
@@ -115,14 +137,21 @@ const Open = () => {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            Open {selectedTier.name} {selectedTier.price} XRD
+            {!isOnline ? 'Queue' : 'Open'} {selectedTier.name} {selectedTier.price} XRD
           </Button>
         </div>
 
-        {/* Swipe Hint */}
-        <p className="text-center text-muted-foreground text-sm mt-4">
-          Tap or swipe up to open
-        </p>
+        {/* Status Messages */}
+        <div className="text-center mt-4 space-y-2">
+          <p className="text-muted-foreground text-sm">
+            Tap or swipe up to {!isOnline ? 'queue' : 'open'}
+          </p>
+          {!isOnline && (
+            <p className="text-orange-400 text-xs">
+              Offline mode - requests will be processed when online
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );

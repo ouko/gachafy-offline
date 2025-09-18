@@ -1,4 +1,5 @@
-const CACHE_NAME = 'gachafi-poc-v1';
+// Enhanced service worker with offline request queuing
+const CACHE_NAME = 'gachafi-poc-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -41,19 +42,44 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - serve from cache, handle offline requests
 self.addEventListener('fetch', (event) => {
+  // Handle mint requests when offline
+  if (event.request.url.includes('/api/mint') && !navigator.onLine) {
+    event.respondWith(
+      new Response(JSON.stringify({ queued: true }), {
+        status: 202,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
         return response || fetch(event.request);
       })
       .catch(() => {
-        // If both cache and network fail, return offline page for navigation requests
         if (event.request.destination === 'document') {
           return caches.match('/');
         }
       })
   );
 });
+
+// Listen for online events to process queued requests
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'PROCESS_QUEUE') {
+    processOfflineQueue();
+  }
+});
+
+async function processOfflineQueue() {
+  // This will be handled by the main thread
+  // Send message to main thread to process queue
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => {
+    client.postMessage({ type: 'PROCESS_OFFLINE_QUEUE' });
+  });
+}
