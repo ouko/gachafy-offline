@@ -28,28 +28,34 @@ const tiers: Tier[] = [
 
 const rarityConfig = {
   common: {
-    gradient: "from-slate-400 via-slate-500 to-slate-600",
-    glowColor: "rgba(148, 163, 184, 0.4)",
+    gradient: "from-slate-300 via-slate-400 to-slate-500",
+    glowColor: "rgba(148, 163, 184, 0.6)",
     icon: Gem,
-    particles: 8,
+    particles: 12,
     animation: "animate-pulse",
-    borderGlow: "shadow-[0_0_15px_rgba(148,163,184,0.3)]",
+    borderGlow: "shadow-[0_0_20px_rgba(148,163,184,0.5)]",
+    cardClass: "glass-card-premium",
+    textGradient: "bg-gradient-to-r from-slate-300 to-slate-100",
   },
   rare: {
-    gradient: "from-blue-400 via-blue-500 to-purple-600",
-    glowColor: "rgba(59, 130, 246, 0.6)",
+    gradient: "from-blue-300 via-blue-400 to-purple-500",
+    glowColor: "rgba(59, 130, 246, 0.8)",
     icon: Star,
-    particles: 12,
+    particles: 16,
     animation: "animate-bounce",
-    borderGlow: "shadow-[0_0_20px_rgba(59,130,246,0.5)]",
+    borderGlow: "shadow-[0_0_25px_rgba(59,130,246,0.7)]",
+    cardClass: "glass-card-premium",
+    textGradient: "bg-gradient-to-r from-blue-300 to-purple-300",
   },
   epic: {
-    gradient: "from-purple-400 via-pink-500 to-red-500",
-    glowColor: "rgba(168, 85, 247, 0.8)",
+    gradient: "from-purple-300 via-pink-400 to-red-400",
+    glowColor: "rgba(168, 85, 247, 1.0)",
     icon: Crown,
-    particles: 16,
+    particles: 20,
     animation: "animate-pulse",
-    borderGlow: "shadow-[0_0_25px_rgba(168,85,247,0.7)]",
+    borderGlow: "shadow-[0_0_30px_rgba(168,85,247,0.9)]",
+    cardClass: "glass-card-premium",
+    textGradient: "bg-gradient-to-r from-purple-300 to-pink-300",
   },
 };
 
@@ -358,29 +364,37 @@ const Open = () => {
 
   return (
     <main className="min-h-screen bg-background p-4 flex flex-col relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Enhanced animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-purple rounded-full opacity-20 blur-xl float-element"></div>
-        <div className="absolute bottom-20 right-10 w-24 h-24 bg-gradient-neon rounded-full opacity-30 blur-lg float-element" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-2xl" 
+             style={{animation: 'magical-float 6s ease-in-out infinite'}}></div>
+        <div className="absolute bottom-20 right-10 w-32 h-32 bg-gradient-to-r from-blue-400/25 to-purple-400/25 rounded-full blur-xl" 
+             style={{animation: 'magical-float 8s ease-in-out infinite', animationDelay: '2s'}}></div>
+        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-r from-pink-400/15 to-red-400/15 rounded-full blur-lg" 
+             style={{animation: 'magical-float 10s ease-in-out infinite', animationDelay: '4s'}}></div>
+        <div className="absolute top-1/3 right-1/3 w-28 h-28 bg-gradient-to-r from-emerald-400/20 to-blue-400/20 rounded-full blur-xl" 
+             style={{animation: 'magical-float 7s ease-in-out infinite', animationDelay: '1s'}}></div>
       </div>
 
-      {/* Top Balance Bar */}
+      {/* Enhanced Top Balance Bar */}
       <div className="flex justify-center mb-8 relative z-10">
         <div 
-          className="glass-card rounded-full px-6 py-3 flex items-center gap-3 cursor-pointer hover:scale-105 transition-all duration-300 glow-pulse select-none"
+          className="glass-card-premium rounded-full px-8 py-4 flex items-center gap-4 cursor-pointer hover:scale-105 transition-all duration-500 select-none"
+          style={{animation: 'glow-pulse 3s ease-in-out infinite'}}
           onTouchStart={handleBalanceSwipeStart}
           onTouchEnd={handleBalanceSwipeEnd}
           title="Swipe up to bridge USDC → XRD"
         >
-          <span className="text-lg font-bold gradient-text font-mono">
+          <span className="text-xl font-bold gradient-text-holographic font-mono tracking-wider">
             {balance.toFixed(3)} XRD
           </span>
           
-          {/* Streak Pill */}
+          {/* Enhanced Streak Pill */}
           {streak > 0 && (
-            <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full shadow-neon">
-              <Flame size={14} className="animate-pulse" />
-              <span className="text-sm font-bold">Day-{streak}</span>
+            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 text-white px-4 py-2 rounded-full shadow-lg border border-orange-300/30">
+              <Flame size={16} className="animate-pulse text-yellow-200" />
+              <span className="text-sm font-bold tracking-wide">Day-{streak}</span>
+              <Sparkles size={14} className="animate-pulse text-yellow-200" />
             </div>
           )}
           
@@ -425,11 +439,12 @@ const Open = () => {
                 <Card
                   key={tier.id}
                   className={cn(
-                    "min-w-[140px] h-[180px] flex flex-col items-center justify-center cursor-pointer transition-all duration-500 snap-center relative overflow-hidden group",
-                    "glass-card hover:scale-110 hover:-translate-y-2",
+                    "min-w-[160px] h-[200px] flex flex-col items-center justify-center cursor-pointer transition-all duration-700 snap-center relative overflow-hidden group",
+                    config.cardClass,
+                    "hover:scale-115 hover:-translate-y-3",
                     isSelected 
-                      ? `border-primary ${config.borderGlow} transform scale-110 -translate-y-2` 
-                      : "border-white/10 hover:border-primary/50"
+                      ? `border-primary/70 ${config.borderGlow} transform scale-115 -translate-y-3 border-2` 
+                      : "border-white/20 hover:border-primary/60 border"
                   )}
                   onClick={() => setSelectedTier(tier)}
                 >
@@ -452,29 +467,37 @@ const Open = () => {
                     ))}
                   </div>
 
-                  {/* Premium card content */}
+                  {/* Enhanced premium card content */}
                   <div className="relative z-10 flex flex-col items-center">
-                    {/* Rarity icon with glow */}
+                    {/* Enhanced rarity icon with premium glow */}
                     <div className={cn(
-                      "w-24 h-24 rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center",
+                      "w-28 h-28 rounded-3xl mb-4 relative overflow-hidden flex items-center justify-center border-2 border-white/20",
                       `bg-gradient-to-br ${config.gradient}`,
                       isSelected ? config.animation : `group-hover:${config.animation}`
                     )}>
-                      {/* Inner glow effect */}
+                      {/* Enhanced inner glow effect */}
                       <div 
-                        className="absolute inset-0 rounded-2xl opacity-60"
+                        className="absolute inset-0 rounded-3xl opacity-80"
                         style={{
-                          background: `radial-gradient(circle at center, ${config.glowColor} 0%, transparent 70%)`,
+                          background: `radial-gradient(circle at center, ${config.glowColor} 0%, transparent 60%)`,
                         }}
                       />
                       
-                      {/* Shimmer overlay */}
+                      {/* Additional glow layer */}
+                      <div 
+                        className="absolute inset-[-2px] rounded-3xl opacity-40 blur-sm"
+                        style={{
+                          background: `linear-gradient(45deg, ${config.glowColor}, transparent, ${config.glowColor})`,
+                        }}
+                      />
+                      
+                      {/* Enhanced shimmer overlay */}
                       <div className={cn(
-                        "absolute inset-0 rounded-2xl",
+                        "absolute inset-0 rounded-3xl",
                         isSelected ? "shimmer" : "group-hover:shimmer"
                       )} />
                       
-                      {/* Icon */}
+                      {/* Enhanced icon */}
                       <IconComponent 
                         className={cn(
                           "w-10 h-10 text-white relative z-10 drop-shadow-lg",
@@ -491,17 +514,21 @@ const Open = () => {
                       />
                     </div>
 
-                    {/* Card details */}
+                    {/* Enhanced card details */}
                     <div className="text-center">
                       <h3 className={cn(
-                        "text-lg font-bold mb-1 uppercase tracking-wider",
-                        isSelected ? "gradient-text" : "text-foreground group-hover:gradient-text"
+                        "text-xl font-bold mb-2 uppercase tracking-widest",
+                        isSelected 
+                          ? `${config.textGradient} bg-clip-text text-transparent scale-110` 
+                          : `text-foreground group-hover:${config.textGradient} group-hover:bg-clip-text group-hover:text-transparent group-hover:scale-105`
                       )}>
                         {tier.name}
                       </h3>
                       <p className={cn(
-                        "text-sm font-mono font-semibold",
-                        isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                        "text-base font-mono font-bold tracking-wider",
+                        isSelected 
+                          ? "text-primary/90 scale-110" 
+                          : "text-muted-foreground group-hover:text-primary group-hover:scale-105"
                       )}>
                         {tier.price}{boosterActive && selectedTier.id === tier.id ? ` + ${boosterCost}` : ''} XRD
                       </p>
@@ -536,46 +563,67 @@ const Open = () => {
           </div>
         </div>
 
-        {/* Booster Toggle */}
-        <div className="mt-8 flex justify-center">
-          <div className="glass-card rounded-full px-6 py-3 flex items-center space-x-4 hover:scale-105 transition-all duration-300">
-            <Zap className={cn("w-5 h-5 transition-colors", boosterActive ? "text-yellow-400" : "text-muted-foreground")} />
-            <span className="text-base font-medium">{boosterDescription}</span>
+        {/* Enhanced Booster Toggle */}
+        <div className="mt-10 flex justify-center">
+          <div className="glass-card-premium rounded-3xl px-8 py-6 flex items-center gap-6 border border-yellow-400/20 hover:scale-105 transition-all duration-500">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-gradient-to-r from-yellow-400/20 to-orange-500/20 border border-yellow-400/30">
+                <Zap className={cn("w-6 h-6 transition-colors animate-pulse", boosterActive ? "text-yellow-400" : "text-muted-foreground")} />
+              </div>
+              <div>
+                <span className="text-lg font-bold gradient-text-gold block">Booster</span>
+                <span className="text-sm text-muted-foreground font-medium">{boosterDescription}</span>
+              </div>
+            </div>
             <Switch 
               checked={boosterActive}
               onCheckedChange={toggleBooster}
-              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-yellow-400 data-[state=checked]:to-orange-500"
+              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-yellow-400 data-[state=checked]:to-orange-500 scale-125"
             />
           </div>
         </div>
 
-        {/* CTA Button */}
-        <div className="mt-10 flex justify-center">
+        {/* Enhanced CTA Button */}
+        <div className="mt-12 flex justify-center">
           <Button
             size="lg"
             className={cn(
-              "w-[320px] h-[64px] text-xl font-bold transition-all duration-300 relative overflow-hidden",
-              (!isConnected || isProcessing) 
-                ? "neon-button" 
-                : canAfford 
-                  ? "neon-button hover:scale-105" 
-                  : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+              "holographic-button min-w-[280px] h-20 text-xl font-bold rounded-3xl transition-all duration-500 border-2 border-white/30 backdrop-blur-sm tracking-wider",
+              !canAfford && isConnected && "opacity-50 cursor-not-allowed grayscale"
             )}
             disabled={isProcessing || (!isConnected ? false : !canAfford)}
             onClick={openBox}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <span className="relative z-10">
-              {!isConnected 
-                ? 'Connect Wallet' 
-                : isProcessing 
-                  ? 'Processing...' 
-                  : !isOnline 
-                    ? `Queue ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
-                    : `Open ${selectedTier.name} ${totalPrice} XRD${boosterActive ? ' (Boosted)' : ''}`
-              }
-            </span>
+            {isProcessing ? (
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="tracking-wider">
+                  {pendingTx ? 'Processing...' : 'Connecting...'}
+                </span>
+              </div>
+            ) : !isConnected ? (
+              <div className="flex items-center gap-3">
+                <Sparkles size={20} className="animate-pulse" />
+                <span className="tracking-wider">Connect Wallet</span>
+                <Sparkles size={20} className="animate-pulse" />
+              </div>
+            ) : !canAfford ? (
+              <span className="tracking-wider">Need {(totalPrice - balance).toFixed(3)} XRD</span>
+            ) : !isOnline ? (
+              <div className="flex items-center gap-3">
+                <Sparkles size={20} className="animate-pulse" />
+                <span className="tracking-wider">Queue {selectedTier.name} • {totalPrice} XRD</span>
+                <Sparkles size={20} className="animate-pulse" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Sparkles size={20} className="animate-pulse" />
+                <span className="tracking-wider">Open {selectedTier.name} • {totalPrice} XRD</span>
+                <Sparkles size={20} className="animate-pulse" />
+              </div>
+            )}
           </Button>
         </div>
 

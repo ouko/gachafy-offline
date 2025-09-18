@@ -39,13 +39,32 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;                 /* Rounded corners */
 
-    /* Custom DeFi variables */
+    /* Enhanced DeFi variables with premium feel */
     --neon-purple: 262 75% 65%;
     --neon-pink: 328 85% 70%;
     --neon-blue: 195 100% 50%;
+    --neon-gold: 45 100% 70%;
+    --neon-emerald: 160 84% 55%;
+    --neon-crimson: 348 83% 62%;
+    
+    /* Premium gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--neon-purple)), hsl(var(--neon-pink)));
-    --glow-purple: 0 0 30px hsla(262, 75%, 65%, 0.6);
+    --gradient-gold: linear-gradient(135deg, hsl(var(--neon-gold)), hsl(45, 100%, 60%));
+    --gradient-emerald: linear-gradient(135deg, hsl(var(--neon-emerald)), hsl(160, 84%, 45%));
+    --gradient-crimson: linear-gradient(135deg, hsl(var(--neon-crimson)), hsl(348, 83%, 52%));
+    --gradient-holographic: linear-gradient(45deg, hsl(var(--neon-purple)), hsl(var(--neon-blue)), hsl(var(--neon-pink)), hsl(var(--neon-gold)));
+    
+    /* Enhanced glows */
+    --glow-purple: 0 0 40px hsla(262, 75%, 65%, 0.7);
+    --glow-gold: 0 0 40px hsla(45, 100%, 70%, 0.7);
+    --glow-emerald: 0 0 40px hsla(160, 84%, 55%, 0.7);
+    --glow-crimson: 0 0 40px hsla(348, 83%, 62%, 0.7);
+    --glow-holographic: 0 0 60px hsla(262, 75%, 65%, 0.5), 0 0 100px hsla(328, 85%, 70%, 0.3);
+    
+    /* Glass morphism */
     --glass-bg: hsla(219, 17%, 12%, 0.8);
+    --glass-border: hsla(255, 255%, 255%, 0.1);
+    --glass-highlight: hsla(255, 255%, 255%, 0.05);
 
     /* Sidebar variables for compatibility */
     --sidebar-background: 0 0% 98%;
@@ -80,32 +99,86 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-sans;
     background-image: 
-      radial-gradient(circle at 20% 80%, hsla(262, 75%, 65%, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, hsla(328, 85%, 70%, 0.15) 0%, transparent 50%);
+      radial-gradient(circle at 20% 80%, hsla(262, 75%, 65%, 0.12) 0%, transparent 60%),
+      radial-gradient(circle at 80% 20%, hsla(328, 85%, 70%, 0.12) 0%, transparent 60%),
+      radial-gradient(circle at 40% 40%, hsla(195, 100%, 50%, 0.08) 0%, transparent 50%);
     min-height: 100vh;
+    position: relative;
+  }
+  
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      linear-gradient(45deg, transparent 30%, hsla(262, 75%, 65%, 0.02) 50%, transparent 70%),
+      linear-gradient(-45deg, transparent 30%, hsla(328, 85%, 70%, 0.02) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
   }
 }
 
 @layer components {
-  /* Glassmorphism card component */
+  /* Enhanced glassmorphism card component */
   .glass-card {
-    @apply bg-card/50 backdrop-blur-lg border border-white/10;
+    @apply bg-card/40 backdrop-blur-xl border;
+    background: linear-gradient(135deg, var(--glass-bg), hsla(219, 17%, 15%, 0.6));
+    border: 1px solid var(--glass-border);
     box-shadow: 
-      0 8px 32px 0 rgba(31, 38, 135, 0.37),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+      0 8px 32px 0 rgba(31, 38, 135, 0.4),
+      inset 0 1px 0 0 var(--glass-highlight),
+      inset 0 -1px 0 0 hsla(255, 255%, 255%, 0.02);
+  }
+  
+  /* Premium glass card with enhanced effects */
+  .glass-card-premium {
+    @apply bg-card/30 backdrop-blur-2xl border;
+    background: 
+      linear-gradient(135deg, var(--glass-bg), hsla(219, 17%, 18%, 0.4)),
+      linear-gradient(45deg, transparent, hsla(262, 75%, 65%, 0.03), transparent);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      0 12px 40px 0 rgba(31, 38, 135, 0.5),
+      inset 0 1px 0 0 var(--glass-highlight),
+      inset 0 -1px 0 0 hsla(255, 255%, 255%, 0.02);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .glass-card-premium::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.8s ease;
+  }
+  
+  .glass-card-premium:hover::before {
+    left: 100%;
   }
 
-  /* Neon button component */
+  /* Enhanced neon button component */
   .neon-button {
-    @apply relative overflow-hidden;
+    @apply relative overflow-hidden font-semibold tracking-wide;
     background: var(--gradient-primary);
     box-shadow: var(--glow-purple);
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid hsla(255, 255%, 255%, 0.2);
   }
 
   .neon-button:hover {
-    box-shadow: 0 0 40px hsla(262, 75%, 65%, 0.8);
-    transform: translateY(-2px);
+    box-shadow: var(--glow-holographic);
+    transform: translateY(-3px) scale(1.02);
+  }
+
+  .neon-button:active {
+    transform: translateY(-1px) scale(0.98);
   }
 
   .neon-button::before {
@@ -118,14 +191,30 @@ All colors MUST be HSL.
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.3),
       transparent
     );
-    transition: left 0.5s;
+    transition: left 0.6s ease;
   }
 
   .neon-button:hover::before {
     left: 100%;
+  }
+  
+  /* Holographic button variant */
+  .holographic-button {
+    @apply relative overflow-hidden font-bold tracking-wider;
+    background: var(--gradient-holographic);
+    background-size: 300% 300%;
+    animation: holographic-shift 3s ease-in-out infinite;
+    box-shadow: var(--glow-holographic);
+    border: 1px solid hsla(255, 255%, 255%, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .holographic-button:hover {
+    transform: translateY(-4px) scale(1.05);
+    animation-duration: 1s;
   }
 
   /* Floating animation */
@@ -138,12 +227,31 @@ All colors MUST be HSL.
     animation: glow-pulse 2s ease-in-out infinite;
   }
 
-  /* Gradient text */
+  /* Enhanced gradient text variants */
   .gradient-text {
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    font-weight: 700;
+  }
+  
+  .gradient-text-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+  }
+  
+  .gradient-text-holographic {
+    background: var(--gradient-holographic);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: holographic-text 2s ease-in-out infinite;
+    font-weight: 800;
   }
 
   /* Shimmer effect */
@@ -196,9 +304,51 @@ All colors MUST be HSL.
 
 @keyframes float {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+@keyframes holographic-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes holographic-text {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px hsla(262, 75%, 65%, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px hsla(262, 75%, 65%, 0.8);
+  }
+}
+
+@keyframes magical-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+    opacity: 0.6;
+  }
+  33% {
+    transform: translateY(-8px) translateX(4px) rotate(120deg);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translateY(-4px) translateX(-4px) rotate(240deg);
+    opacity: 1;
   }
 }
