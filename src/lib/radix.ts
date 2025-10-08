@@ -42,6 +42,11 @@ class RadixService {
         applicationVersion: '1.0.0',
       });
 
+      // Configure button appearance and request data
+      try {
+        this.rdt.buttonApi.setMode('dark');
+      } catch {}
+      
       // Request at least one account by default so the √ Connect button knows what to ask for
       await this.rdt.walletApi.setRequestData(
         DataRequestBuilder.accounts().atLeast(1)
@@ -76,12 +81,14 @@ class RadixService {
     try {
       logger.info('Attempting wallet connection', null, 'RadixService');
       
+      // Prepare request and trigger wallet
       await this.rdt!.walletApi.setRequestData(
         DataRequestBuilder.accounts().atLeast(1)
       );
+      const result = await this.rdt!.walletApi.sendRequest();
 
-      logger.info('Wallet connection request data set', null, 'RadixService');
-      return null;
+      logger.info('Wallet connection successful', null, 'RadixService');
+      return result;
     } catch (error) {
       logger.error('Wallet connection failed', error, 'RadixService');
       return null;

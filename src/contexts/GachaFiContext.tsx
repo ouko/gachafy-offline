@@ -177,6 +177,35 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     };
   }, []);
 
+  // Bridge √ Connect button click to programmatic request (fallback)
+  useEffect(() => {
+    const btn = document.querySelector('radix-connect-button') as HTMLElement | null;
+    if (!btn) return;
+
+    const handle = async () => {
+      if (wallet.isConnected || wallet.isLoading) return;
+      setWallet(prev => ({ ...prev, isLoading: true }));
+      try {
+        const result: any = await radixService.connectWallet();
+        const address = result?.accounts?.[0]?.address ?? '';
+        if (address) {
+          setWallet(prev => ({ ...prev, address, isConnected: true }));
+        }
+      } catch (e) {
+        logger.warn('Programmatic connect failed', e as any, 'GachaFiContext');
+      } finally {
+        setWallet(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    // The web component emits CustomEvent names like 'onConnect'
+    btn.addEventListener('onConnect', handle as EventListener);
+
+    return () => {
+      btn.removeEventListener('onConnect', handle as EventListener);
+    };
+  }, [wallet.isConnected, wallet.isLoading]);
+
   // Poll balance
   useEffect(() => {
     if (!wallet.isConnected) return;
