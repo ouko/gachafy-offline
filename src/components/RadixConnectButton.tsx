@@ -6,7 +6,9 @@ import { toast } from "sonner";
 
 /**
  * Radix √ Connect Button - Following Radix DLT branding guidelines
- * Based on: https://www.radixdlt.com/blog/using-radix-dapp-toolkits-connect-button-for-great-wallet-connection-ux
+ * Supports both desktop (via browser extension) and mobile (via deep linking)
+ * Mobile deep linking automatically opens the Radix Wallet app on the same device
+ * Based on: https://www.radixdlt.com/blog/radix-connect-for-mobile-dapps---out-now
  */
 export const RadixConnectButton = () => {
   const { address, isConnected, connectWallet, balance, isLoading } = useWallet();

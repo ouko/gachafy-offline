@@ -27,16 +27,23 @@ class RadixService {
     if (this.initialized) return;
 
     try {
-      logger.info('Initializing Radix DApp Toolkit', null, 'RadixService');
+      logger.info('Initializing Radix DApp Toolkit with mobile support', null, 'RadixService');
       
       this.rdt = RadixDappToolkit({
         dAppDefinitionAddress: STOKENET_CONFIG.dAppDefinitionAddress,
         networkId: STOKENET_CONFIG.networkId,
         applicationName: 'GachaFi',
         applicationVersion: '1.0.0',
+        // Mobile wallet support is automatically enabled via Radix Connect
+        // Deep linking works seamlessly on mobile browsers
       });
 
-      logger.info('Radix DApp Toolkit initialized successfully', null, 'RadixService');
+      // Subscribe to wallet connection state changes
+      this.rdt.walletApi.walletData$.subscribe((walletData) => {
+        logger.info('Wallet data updated', { walletData }, 'RadixService');
+      });
+
+      logger.info('Radix DApp Toolkit initialized successfully with mobile deep linking', null, 'RadixService');
       this.initialized = true;
     } catch (error) {
       logger.error('Failed to initialize Radix DApp Toolkit', error, 'RadixService');
