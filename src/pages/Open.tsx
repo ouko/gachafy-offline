@@ -542,47 +542,53 @@ const Open = () => {
 
         {/* Enhanced CTA Button */}
         <div className="mt-12 flex justify-center">
-          <Button
-            size="lg"
-            className={cn(
-              "holographic-button min-w-[280px] h-20 text-xl font-bold rounded-3xl transition-all duration-500 border-2 border-white/30 backdrop-blur-sm tracking-wider",
-              !canAfford && isConnected && "opacity-50 cursor-not-allowed grayscale"
-            )}
-            disabled={isProcessing || !isConnected || (!isConnected ? true : !canAfford)}
-            onClick={openBox}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onMouseEnter={() => playButtonHover()}
-          >
-            {isProcessing ? (
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                <span className="tracking-wider">
-                  {pendingTx ? 'Processing...' : 'Connecting...'}
-                </span>
+          {!isConnected ? (
+            /* Radix Connect Button - Large Centered */
+            <div className="flex flex-col items-center gap-4">
+              <div className="transform scale-150">
+                <RadixConnectButton />
               </div>
-            ) : !isConnected ? (
-              <div className="flex items-center gap-3">
-                <Sparkles size={20} className="animate-pulse" />
-                <span className="tracking-wider">Please Connect Wallet</span>
-                <Sparkles size={20} className="animate-pulse" />
-              </div>
-            ) : !canAfford ? (
-              <span className="tracking-wider">Need {(totalPrice - balance).toFixed(3)} XRD</span>
-            ) : !isOnline ? (
-              <div className="flex items-center gap-3">
-                <Sparkles size={20} className="animate-pulse" />
-                <span className="tracking-wider">Queue {selectedTier.name} • {totalPrice} XRD</span>
-                <Sparkles size={20} className="animate-pulse" />
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Sparkles size={20} className="animate-pulse" />
-                <span className="tracking-wider">Open {selectedTier.name} • {totalPrice} XRD</span>
-                <Sparkles size={20} className="animate-pulse" />
-              </div>
-            )}
-          </Button>
+              <p className="text-muted-foreground text-sm">
+                Connect your Radix wallet to start opening boxes
+              </p>
+            </div>
+          ) : (
+            <Button
+              size="lg"
+              className={cn(
+                "holographic-button min-w-[280px] h-20 text-xl font-bold rounded-3xl transition-all duration-500 border-2 border-white/30 backdrop-blur-sm tracking-wider",
+                !canAfford && "opacity-50 cursor-not-allowed grayscale"
+              )}
+              disabled={isProcessing || !canAfford}
+              onClick={openBox}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onMouseEnter={() => playButtonHover()}
+            >
+              {isProcessing ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="tracking-wider">
+                    {pendingTx ? 'Processing...' : 'Connecting...'}
+                  </span>
+                </div>
+              ) : !canAfford ? (
+                <span className="tracking-wider">Need {(totalPrice - balance).toFixed(3)} XRD</span>
+              ) : !isOnline ? (
+                <div className="flex items-center gap-3">
+                  <Sparkles size={20} className="animate-pulse" />
+                  <span className="tracking-wider">Queue {selectedTier.name} • {totalPrice} XRD</span>
+                  <Sparkles size={20} className="animate-pulse" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Sparkles size={20} className="animate-pulse" />
+                  <span className="tracking-wider">Open {selectedTier.name} • {totalPrice} XRD</span>
+                  <Sparkles size={20} className="animate-pulse" />
+                </div>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Status Messages */}
