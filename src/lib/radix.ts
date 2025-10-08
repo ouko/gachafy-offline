@@ -42,6 +42,11 @@ class RadixService {
         applicationVersion: '1.0.0',
       });
 
+      // Request at least one account by default so the √ Connect button knows what to ask for
+      await this.rdt.walletApi.setRequestData({
+        accounts: { quantifier: 'atLeast', quantity: 1 },
+      });
+
       // Subscribe to wallet connection state changes
       this.rdt.walletApi.walletData$.subscribe((walletData) => {
         logger.info('Wallet data updated', { walletData }, 'RadixService');
