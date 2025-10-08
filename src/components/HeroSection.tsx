@@ -7,7 +7,7 @@ const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Radix √ Connect Button - Following Radix DLT branding guidelines */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-4 right-28 z-50">
         <RadixConnectButton />
       </div>
       {/* Background */}
