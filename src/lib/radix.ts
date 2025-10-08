@@ -9,7 +9,7 @@ export const STOKENET_CONFIG = {
   networkId: RadixNetwork.Stokenet, // Use the correct enum
   dAppDefinitionAddress: 'account_tdx_2_129vr3rwyz7gnwf35kkuxvx0fs4hkz0n5hem9utaejqra3sxf0m5wej',
   rpcUrl: 'https://stokenet.radixdlt.com',
-  gatewayUrl: 'https://stokenet-gateway.radixdlt.com'
+  gatewayUrl: 'https://babylon-stokenet-gateway.radixdlt.com'
 };
 
 // XRD resource address on Stokenet
