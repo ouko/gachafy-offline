@@ -1,5 +1,7 @@
 # GachaFi - Offline-First Web3 Gacha Gaming
 
+> **🎯 100% Independent & Portable** - Zero Lovable dependencies. Deploy anywhere. Own everything.
+
 A production-ready, offline-first gacha gaming application built with React, Radix DLT, and modern web technologies. Features Web3 wallet integration, PWA capabilities, and a beautiful UI.
 
 ## 🚀 Quick Start
@@ -188,30 +190,70 @@ See `.github/workflows/ci.yml`
 
 ## 📚 Documentation
 
+- **[LOVABLE_INDEPENDENCE_CHECKLIST.md](./LOVABLE_INDEPENDENCE_CHECKLIST.md)** - Verify zero Lovable dependencies ⭐
+- **[INDEPENDENCE.md](./INDEPENDENCE.md)** - Complete independence proof & alternatives
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Quick deployment guide
 - **[README.production.md](./README.production.md)** - Comprehensive production guide
 - **[DATABASE_ALTERNATIVES.md](./DATABASE_ALTERNATIVES.md)** - Database migration options
+- **[SELF_HOSTING.md](./SELF_HOSTING.md)** - Complete self-hosting guide ($5/month)
 
-## 🎯 Independent of Lovable
+## 🎯 Complete Independence Verification
 
-This codebase is **fully portable** and runs independently:
+**Run the checklist to verify zero Lovable dependencies:**
+```bash
+# Verify no Lovable packages
+grep -i "lovable" package.json vite.config.ts
+# Expected: No results ✓
 
-✅ **No Lovable Dependencies** - Pure React/Vite application  
-✅ **Standard Tooling** - npm, Vite, TypeScript  
-✅ **Deploy Anywhere** - Vercel, Netlify, AWS, Docker, etc.  
-✅ **Own Your Data** - Supabase project you control  
-✅ **GitHub Integration** - Two-way sync available  
+# Verify no Lovable in code
+grep -r "lovable\|Lovable" src/
+# Expected: No results ✓
+
+# Build without Lovable
+npm install && npm run build
+# Expected: Builds successfully ✓
+```
+
+See **[LOVABLE_INDEPENDENCE_CHECKLIST.md](./LOVABLE_INDEPENDENCE_CHECKLIST.md)** for complete verification.
+
+### What You Own
+✅ All source code (in your GitHub)  
+✅ All data (your Supabase account)  
+✅ All deployments (your hosting)  
+✅ All functionality (no lock-in)  
+
+### What Lovable Has
+❌ No access to your code  
+❌ No access to your data  
+❌ No control over your app  
+
+**Lovable was the development tool. The output is 100% yours, forever.**
+
+## 🎯 Complete Independence
+
+This codebase has **ZERO Lovable dependencies**:
+
+✅ **Pure Open Source** - Standard React + Vite + TypeScript  
+✅ **Standard Dependencies** - All from public npm registry  
+✅ **Deploy Anywhere** - Vercel, Netlify, AWS, Docker, VPS, GitHub Pages  
+✅ **Own Your Services** - Supabase (optional), OneSignal (optional)  
+✅ **Replace Anything** - Every service has documented alternatives  
+✅ **No Lock-in** - Works completely standalone forever  
+
+### Lovable-Free Guarantee
+- ✅ No Lovable packages in dependencies
+- ✅ No Lovable APIs in code  
+- ✅ No Lovable services required
+- ✅ Removed development-only tagger plugin
+- ✅ Can fork and never use Lovable again
+
+See **[INDEPENDENCE.md](./INDEPENDENCE.md)** for complete proof and alternatives.
 
 ### Using with Lovable (Optional)
 - Continue developing in Lovable if desired
 - Changes sync bidirectionally with GitHub
 - Can switch between Lovable and local IDE anytime
-
-### Fully Independent Usage
-1. Clone from GitHub
-2. Configure environment variables
-3. Deploy to any hosting platform
-4. Never touch Lovable again if you prefer
+- **Or ignore Lovable completely - your choice!**
 
 ## 🤝 Contributing
 
