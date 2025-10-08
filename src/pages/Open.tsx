@@ -87,19 +87,7 @@ const Open = () => {
         console.log('Initializing Radix service...');
         await radixService.initialize();
         console.log('Radix service initialized');
-        
-        // Try to auto-connect if previously connected
-        console.log('Attempting auto-connect...');
-        const result = await radixService.connectWallet();
-        console.log('Auto-connect result:', result);
-        
-        if (result?.accounts?.length > 0) {
-          setWalletAddress(result.accounts[0].address);
-          setIsConnected(true);
-          console.log('Auto-connected to wallet:', result.accounts[0].address);
-        } else {
-          console.log('No auto-connection available');
-        }
+        // Do not auto-connect on load; wait for explicit user action via Connect button
       } catch (error) {
         console.error('Radix initialization error:', error);
       }
