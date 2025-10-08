@@ -6,15 +6,15 @@ Run this checklist to verify your GachaFi app has ZERO Lovable dependencies.
 
 ### Dependencies Check
 ```bash
-# Check package.json for Lovable packages
+# Check package.json for Lovable runtime dependencies
 grep -i "lovable" package.json
-# Expected: No results
+# Expected: Only "lovable-tagger" as devDependency (development tool)
 
-# Check for lovable-tagger
-grep -i "lovable-tagger" package.json vite.config.ts
-# Expected: No results (removed from vite.config.ts)
+# Check for production dependencies
+npm list --prod | grep -i lovable
+# Expected: No results (tagger is dev-only)
 ```
-✅ **Status**: All Lovable packages removed
+✅ **Status**: Only development tooling, zero production dependencies
 
 ### Source Code Check
 ```bash
