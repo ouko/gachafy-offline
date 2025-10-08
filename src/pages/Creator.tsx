@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { TrendingUp, Coins, DollarSign, Zap, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { RadixConnectButton } from '@/components/RadixConnectButton';
 
 interface CapsuleData {
   id: string;
@@ -103,7 +102,7 @@ const Creator = () => {
             </p>
           </div>
           <div className="flex justify-center">
-            <RadixConnectButton />
+            <radix-connect-button />
           </div>
         </Card>
       </div>

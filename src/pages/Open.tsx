@@ -14,7 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import { useBooster } from "@/hooks/useBooster";
 import { useAudio } from "@/hooks/useAudio";
 import AudioControls from "@/components/AudioControls";
-import { RadixConnectButton } from "@/components/RadixConnectButton";
 
 interface Tier {
   id: string;
@@ -322,11 +321,6 @@ const Open = () => {
 
   return (
     <main className="min-h-screen bg-background p-4 flex flex-col relative overflow-hidden">
-      {/* Radix Connect Button - Top Right */}
-      <div className="absolute top-4 right-4 z-40">
-        <RadixConnectButton />
-      </div>
-
       {/* Enhanced animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-2xl" 
