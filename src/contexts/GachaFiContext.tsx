@@ -147,31 +147,34 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
         // Update streak state on init
         updateStreakState();
         
-        // Try to connect to real Radix wallet
-        try {
-          const result = await radixService.connectWallet();
-          
-          if (result?.accounts?.length > 0) {
-            const address = result.accounts[0].address;
-            logger.info('Auto-connected to Radix wallet', { address }, 'GachaFiContext');
-            
-            setWallet(prev => ({
-              ...prev,
-              address,
-              isConnected: true,
-            }));
-          } else {
-            logger.warn('No Radix wallet found - user must manually connect', null, 'GachaFiContext');
-          }
-        } catch (error) {
-          logger.warn('Radix wallet auto-connect failed - user must manually connect', error, 'GachaFiContext');
-        }
+        // Do not auto-connect; the √ Connect button handles login flow
+        logger.info('Waiting for user to connect via √ Connect button', null, 'GachaFiContext');
       } catch (error) {
         logger.error('GachaFi initialization error', error, 'GachaFiContext');
       }
     };
 
     initWallet();
+  }, []);
+
+  // Subscribe to RDT wallet data to reflect connection status in app state
+  useEffect(() => {
+    const unsubscribe = radixService.onWalletData((walletData: any) => {
+      try {
+        const address = walletData?.accounts?.[0]?.address ?? '';
+        setWallet(prev => ({
+          ...prev,
+          address,
+          isConnected: !!address,
+        }));
+      } catch (e) {
+        logger.warn('Failed parsing wallet data', e as any, 'GachaFiContext');
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
 
   // Poll balance
