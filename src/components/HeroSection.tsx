@@ -1,14 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Radix √ Connect Button */}
-      <div className="absolute top-4 right-28 z-50">
-        <radix-connect-button />
-      </div>
       {/* Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
@@ -23,52 +17,12 @@ const HeroSection = () => {
       
       {/* Content */}
       <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
-        <div className="mb-8">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            GachaFi
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-2">
-            The Future of Gacha Gaming DeFi
-          </p>
-          <p className="text-lg text-muted-foreground/80 max-w-2xl mx-auto">
-            Experience the next generation of gacha gaming powered by DeFi mechanics. 
-            Collect rare NFTs, trade assets, and earn rewards in the decentralized gaming economy.
-          </p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-          <Button 
-            size="lg" 
-            className="gradient-hero text-white border-0 shadow-glow transition-smooth hover:shadow-glow hover:scale-105"
-            onClick={() => window.location.href = '/open'}
-          >
-            Launch App
-          </Button>
-          <Button variant="outline" size="lg" className="border-primary/50 text-primary hover:bg-primary/10 transition-smooth">
-            Learn More
-          </Button>
-        </div>
-        
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="gradient-card border-primary/20 p-6 shadow-card transition-smooth hover:shadow-glow hover:scale-105">
-            <div className="text-3xl mb-4">🎲</div>
-            <h3 className="text-xl font-semibold mb-2 text-primary">Gacha Mechanics</h3>
-            <p className="text-muted-foreground">Collect rare NFTs through provably fair gacha mechanics powered by blockchain technology.</p>
-          </Card>
-          
-          <Card className="gradient-card border-primary/20 p-6 shadow-card transition-smooth hover:shadow-glow hover:scale-105">
-            <div className="text-3xl mb-4">💎</div>
-            <h3 className="text-xl font-semibold mb-2 text-primary">DeFi Rewards</h3>
-            <p className="text-muted-foreground">Stake your assets, provide liquidity, and earn yield through innovative DeFi protocols.</p>
-          </Card>
-          
-          <Card className="gradient-card border-primary/20 p-6 shadow-card transition-smooth hover:shadow-glow hover:scale-105">
-            <div className="text-3xl mb-4">🔄</div>
-            <h3 className="text-xl font-semibold mb-2 text-primary">NFT Trading</h3>
-            <p className="text-muted-foreground">Trade your collections on our built-in marketplace with zero gas fees and instant settlements.</p>
-          </Card>
-        </div>
+        <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+          GachaFi
+        </h1>
+        <p className="text-2xl md:text-3xl text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          Loading your adventure...
+        </p>
       </div>
     </section>
   );
