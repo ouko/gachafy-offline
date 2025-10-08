@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { radixService } from '@/lib/radix';
 import { oneSignalService } from '@/lib/oneSignal';
+import { logger } from '@/lib/logger';
 
 interface Wallet {
   address: string;
@@ -62,7 +63,7 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     address: '',
     balance: 0,
     isConnected: false,
-    isDemoMode: true, // Default to demo mode
+    isDemoMode: false, // Start in REAL mode, not demo
     isLoading: false,
     pendingTx: '',
   });
@@ -141,32 +142,37 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
   useEffect(() => {
     const initWallet = async () => {
       try {
-        console.log('GachaFi: Initializing in demo mode...');
+        logger.info('GachaFi: Initializing Radix wallet connection...', null, 'GachaFiContext');
         await radixService.initialize();
         await oneSignalService.initialize();
         
         // Update streak state on init
         updateStreakState();
         
-        // Try auto-connect, but fallback to demo mode
+        // Try to connect to real Radix wallet
         try {
           const result = await radixService.connectWallet();
+          
           if (result?.accounts?.length > 0) {
+            const address = result.accounts[0].address;
+            logger.info('Auto-connected to Radix wallet', { address }, 'GachaFiContext');
+            
             setWallet(prev => ({
               ...prev,
-              address: result.accounts[0].address,
+              address,
               isConnected: true,
-              isDemoMode: false,
+              isDemoMode: false, // Real wallet connected
             }));
           } else {
-            // Stay in demo mode
-            console.log('GachaFi: No wallet found, staying in demo mode');
+            logger.warn('No Radix wallet found - user must manually connect', null, 'GachaFiContext');
+            // Don't auto-enable demo mode - wait for user action
           }
         } catch (error) {
-          console.log('GachaFi: Wallet connection failed, staying in demo mode');
+          logger.warn('Radix wallet auto-connect failed - user must manually connect', error, 'GachaFiContext');
+          // Don't auto-enable demo mode - let user decide
         }
       } catch (error) {
-        console.error('GachaFi: Initialization error:', error);
+        logger.error('GachaFi initialization error', error, 'GachaFiContext');
       }
     };
 
@@ -212,39 +218,19 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     setWallet(prev => ({ ...prev, isLoading: true }));
     
     try {
-      if (wallet.isDemoMode) {
-        // Demo connection
-        setTimeout(async () => {
-          const demoAddress = "account_tdx_2_demo_simulation_12345678";
-          setWallet(prev => ({
-            ...prev,
-            address: demoAddress,
-            isConnected: true,
-            balance: 35.5,
-            isLoading: false,
-          }));
-          
-          // Request push notification permission on first connect
-          try {
-            const hasPermission = await oneSignalService.isSubscribed();
-            if (!hasPermission) {
-              console.log('Requesting push notification permission...');
-              await oneSignalService.requestPermission();
-            }
-          } catch (error) {
-            console.error('Failed to request push permission:', error);
-          }
-        }, 1000);
-        return;
-      }
-
+      logger.info('Attempting Radix wallet connection...', null, 'GachaFiContext');
+      
       const result = await radixService.connectWallet();
+      
       if (result?.accounts?.length > 0) {
+        const address = result.accounts[0].address;
+        logger.info('Successfully connected to Radix wallet', { address }, 'GachaFiContext');
+        
         setWallet(prev => ({
           ...prev,
-          address: result.accounts[0].address,
+          address,
           isConnected: true,
-          isDemoMode: false,
+          isDemoMode: false, // Real wallet
           isLoading: false,
         }));
         
@@ -252,27 +238,32 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
         try {
           const hasPermission = await oneSignalService.isSubscribed();
           if (!hasPermission) {
-            console.log('Requesting push notification permission...');
             await oneSignalService.requestPermission();
           }
         } catch (error) {
-          console.error('Failed to request push permission:', error);
+          logger.error('Failed to request push permission', error, 'GachaFiContext');
         }
       } else {
-        // Fallback to demo mode
+        // No wallet extension found or user cancelled
+        logger.warn('No Radix wallet found or connection cancelled', null, 'GachaFiContext');
+        
         setWallet(prev => ({
           ...prev,
-          isDemoMode: true,
           isLoading: false,
         }));
+        
+        throw new Error('Please install Radix Wallet browser extension');
       }
     } catch (error) {
-      console.error('GachaFi: Wallet connection error:', error);
+      logger.error('Radix wallet connection error', error, 'GachaFiContext');
+      
       setWallet(prev => ({
         ...prev,
-        isDemoMode: true,
         isLoading: false,
       }));
+      
+      // Re-throw to show error to user
+      throw error;
     }
   };
 

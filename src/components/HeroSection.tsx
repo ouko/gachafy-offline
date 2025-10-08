@@ -3,12 +3,30 @@ import { Card } from "@/components/ui/card";
 import heroBg from "@/assets/hero-bg.jpg";
 import { useWallet } from "@/hooks/useWallet";
 import { Wallet } from "lucide-react";
+import { useState } from "react";
+import { RadixWalletPrompt } from "./RadixWalletPrompt";
+import { toast } from "sonner";
 
 const HeroSection = () => {
-  const { address, isConnected, connectWallet, balance } = useWallet();
+  const { address, isConnected, connectWallet, balance, isLoading } = useWallet();
+  const [showWalletPrompt, setShowWalletPrompt] = useState(false);
+
+  const handleConnect = async () => {
+    try {
+      await connectWallet();
+      toast.success("Wallet connected successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to connect wallet");
+      // Show setup guide if no wallet extension found
+      if (error.message?.includes('install')) {
+        setShowWalletPrompt(true);
+      }
+    }
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {showWalletPrompt && <RadixWalletPrompt onDismiss={() => setShowWalletPrompt(false)} />}
       {/* Wallet Connection Button */}
       <div className="absolute top-6 right-6 z-20">
         {isConnected ? (
@@ -16,17 +34,18 @@ const HeroSection = () => {
             <div className="flex flex-col items-end">
               <span className="text-xs text-muted-foreground">Connected</span>
               <span className="text-sm font-semibold text-primary">{address?.slice(0, 8)}...{address?.slice(-6)}</span>
-              <span className="text-xs text-muted-foreground">{balance} XRD</span>
+              <span className="text-xs text-muted-foreground">{balance.toFixed(3)} XRD</span>
             </div>
             <Wallet className="h-5 w-5 text-primary" />
           </div>
         ) : (
           <Button 
-            onClick={connectWallet}
+            onClick={handleConnect}
+            disabled={isLoading}
             className="gradient-hero text-white border-0 shadow-glow transition-smooth hover:shadow-glow hover:scale-105"
           >
             <Wallet className="mr-2 h-4 w-4" />
-            Connect Wallet
+            {isLoading ? 'Connecting...' : 'Connect Wallet'}
           </Button>
         )}
       </div>

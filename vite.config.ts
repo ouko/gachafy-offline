@@ -19,13 +19,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    minify: 'esbuild', // Using esbuild (built-in, faster)
     rollupOptions: {
       output: {
         manualChunks: {
