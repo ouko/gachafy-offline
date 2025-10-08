@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { useBooster } from "@/hooks/useBooster";
 import { useAudio } from "@/hooks/useAudio";
 import AudioControls from "@/components/AudioControls";
+import { RadixConnectButton } from "@/components/RadixConnectButton";
 
 interface Tier {
   id: string;
@@ -321,6 +322,11 @@ const Open = () => {
 
   return (
     <main className="min-h-screen bg-background p-4 flex flex-col relative overflow-hidden">
+      {/* Radix Connect Button - Top Right */}
+      <div className="absolute top-4 right-4 z-40">
+        <RadixConnectButton />
+      </div>
+
       {/* Enhanced animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-2xl" 
@@ -334,7 +340,7 @@ const Open = () => {
       </div>
 
       {/* Enhanced Top Balance Bar */}
-      <div className="flex justify-center mb-8 relative z-10">
+      <div className="flex justify-center mb-8 relative z-10 mt-16">
         <div 
           className="glass-card-premium rounded-full px-8 py-4 flex items-center gap-4 cursor-pointer hover:scale-105 transition-all duration-500 select-none"
           style={{animation: 'glow-pulse 3s ease-in-out infinite'}}
@@ -355,11 +361,6 @@ const Open = () => {
             </div>
           )}
           
-          {!isConnected && (
-            <span className="text-xs bg-red-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
-              NOT CONNECTED
-            </span>
-          )}
           {!isOnline && (
             <span className="text-xs bg-orange-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
               OFFLINE
