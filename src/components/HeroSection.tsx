@@ -1,10 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import heroBg from "@/assets/hero-bg.jpg";
+import { useWallet } from "@/hooks/useWallet";
+import { Wallet } from "lucide-react";
 
 const HeroSection = () => {
+  const { address, isConnected, connectWallet, balance } = useWallet();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Wallet Connection Button */}
+      <div className="absolute top-6 right-6 z-20">
+        {isConnected ? (
+          <div className="flex items-center gap-3 bg-background/80 backdrop-blur-md border border-primary/30 rounded-lg p-3 shadow-glow">
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-muted-foreground">Connected</span>
+              <span className="text-sm font-semibold text-primary">{address?.slice(0, 8)}...{address?.slice(-6)}</span>
+              <span className="text-xs text-muted-foreground">{balance} XRD</span>
+            </div>
+            <Wallet className="h-5 w-5 text-primary" />
+          </div>
+        ) : (
+          <Button 
+            onClick={connectWallet}
+            className="gradient-hero text-white border-0 shadow-glow transition-smooth hover:shadow-glow hover:scale-105"
+          >
+            <Wallet className="mr-2 h-4 w-4" />
+            Connect Wallet
+          </Button>
+        )}
+      </div>
       {/* Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
