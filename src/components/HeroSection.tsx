@@ -1,14 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import heroBg from "@/assets/hero-bg.jpg";
-import { RadixConnectButton } from "@/components/RadixConnectButton";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Radix √ Connect Button - Following Radix DLT branding guidelines */}
+      {/* Radix √ Connect Button */}
       <div className="absolute top-4 right-28 z-50">
-        <RadixConnectButton />
+        <radix-connect-button />
       </div>
       {/* Background */}
       <div 

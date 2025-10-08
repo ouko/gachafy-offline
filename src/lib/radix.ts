@@ -22,6 +22,12 @@ export const GACHA_COMPONENT_ADDRESS = 'component_tdx_2_1cp4r8p8p8p8p8p8p8p8p8p8
 class RadixService {
   private rdt: RadixDappToolkit | null = null;
   private initialized = false;
+  private walletDataListeners = new Set<(data: any) => void>();
+
+  onWalletData(listener: (data: any) => void) {
+    this.walletDataListeners.add(listener);
+    return () => this.walletDataListeners.delete(listener);
+  }
 
   async initialize() {
     if (this.initialized) return;
@@ -34,13 +40,15 @@ class RadixService {
         networkId: STOKENET_CONFIG.networkId,
         applicationName: 'GachaFi',
         applicationVersion: '1.0.0',
-        // Mobile wallet support is automatically enabled via Radix Connect
-        // Deep linking works seamlessly on mobile browsers
       });
 
       // Subscribe to wallet connection state changes
       this.rdt.walletApi.walletData$.subscribe((walletData) => {
         logger.info('Wallet data updated', { walletData }, 'RadixService');
+        // Notify listeners (e.g., React context)
+        this.walletDataListeners.forEach((cb) => {
+          try { cb(walletData); } catch {}
+        });
       });
 
       logger.info('Radix DApp Toolkit initialized successfully with mobile deep linking', null, 'RadixService');
