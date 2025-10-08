@@ -546,7 +546,7 @@ const Open = () => {
             /* Radix Connect Button - Large Centered */
             <div className="flex flex-col items-center gap-4">
               <div className="transform scale-150">
-                <RadixConnectButton />
+                <radix-connect-button />
               </div>
               <p className="text-muted-foreground text-sm">
                 Connect your Radix wallet to start opening boxes
