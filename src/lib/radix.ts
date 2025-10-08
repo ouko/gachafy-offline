@@ -1,4 +1,4 @@
-import { RadixDappToolkit, RadixNetwork } from '@radixdlt/radix-dapp-toolkit';
+import { RadixDappToolkit, RadixNetwork, DataRequestBuilder } from '@radixdlt/radix-dapp-toolkit';
 import { withRetry, withTimeout, NetworkError, TransactionError } from './errorHandling';
 import { validateInput, walletAddressSchema, balanceSchema, nonceSchema } from './validation';
 import { logger } from './logger';
@@ -43,9 +43,9 @@ class RadixService {
       });
 
       // Request at least one account by default so the √ Connect button knows what to ask for
-      await this.rdt.walletApi.setRequestData({
-        accounts: { quantifier: 'atLeast', quantity: 1 },
-      });
+      await this.rdt.walletApi.setRequestData(
+        DataRequestBuilder.accounts().atLeast(1)
+      );
 
       // Subscribe to wallet connection state changes
       this.rdt.walletApi.walletData$.subscribe((walletData) => {
@@ -76,12 +76,12 @@ class RadixService {
     try {
       logger.info('Attempting wallet connection', null, 'RadixService');
       
-      const result = await this.rdt!.walletApi.setRequestData({
-        accounts: { quantifier: 'atLeast', quantity: 1 },
-      });
+      await this.rdt!.walletApi.setRequestData(
+        DataRequestBuilder.accounts().atLeast(1)
+      );
 
-      logger.info('Wallet connection successful', null, 'RadixService');
-      return result;
+      logger.info('Wallet connection request data set', null, 'RadixService');
+      return null;
     } catch (error) {
       logger.error('Wallet connection failed', error, 'RadixService');
       return null;
