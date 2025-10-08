@@ -17,11 +17,19 @@ export const RadixConnectButton = () => {
   const handleConnect = async () => {
     try {
       await connectWallet();
-      toast.success("Wallet connected successfully!");
+      toast.success("Wallet connected!", {
+        duration: 3000,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to connect wallet");
-      if (error.message?.includes('install')) {
+      // Don't show toast for install errors - show the modal instead
+      if (error.message?.includes('install') || error.message?.includes('Wallet')) {
         setShowWalletPrompt(true);
+      } else {
+        // Show toast only for actual connection errors
+        toast.error("Connection failed", {
+          description: "Please try again",
+          duration: 4000,
+        });
       }
     }
   };
