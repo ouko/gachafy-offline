@@ -75,7 +75,7 @@ const Open = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [pendingTx, setPendingTx] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
   const [swipeStartY, setSwipeStartY] = useState(0);
   const [swipeStartTime, setSwipeStartTime] = useState(0);
@@ -98,44 +98,36 @@ const Open = () => {
           setIsConnected(true);
           console.log('Auto-connected to wallet:', result.accounts[0].address);
         } else {
-          console.log('No auto-connection available - enabling demo mode');
-          setIsDemoMode(true);
+          console.log('No auto-connection available');
         }
       } catch (error) {
         console.error('Radix initialization error:', error);
-        console.log('Enabling demo mode due to connection error');
-        setIsDemoMode(true);
       }
     };
     
     initRadix();
   }, []);
 
-  // Poll balance every 5 seconds (live RPC or demo)
+  // Poll balance every 5 seconds
   useEffect(() => {
     if (!isConnected || !walletAddress) return;
 
     const fetchBalance = async () => {
       try {
-        if (isDemoMode) {
-          // Demo mode: simulate a realistic balance
-          setBalance(35.5);
-        } else {
-          const liveBalance = await radixService.getBalance(walletAddress);
-          setBalance(liveBalance);
-        }
+        const liveBalance = await radixService.getBalance(walletAddress);
+        setBalance(liveBalance);
       } catch (error) {
         console.error('Error fetching balance:', error);
       }
     };
 
     fetchBalance(); // Initial fetch
-    const interval = isDemoMode ? null : setInterval(fetchBalance, 5000);
+    const interval = setInterval(fetchBalance, 5000);
 
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
-  }, [isConnected, walletAddress, isDemoMode]);
+  }, [isConnected, walletAddress]);
 
   // Poll pending transaction status
   useEffect(() => {
@@ -170,23 +162,6 @@ const Open = () => {
     try {
       setIsLoading(true);
       
-      if (isDemoMode) {
-        // Demo mode: simulate wallet connection
-        console.log('Demo mode: simulating wallet connection...');
-        setTimeout(() => {
-          const demoAddress = "account_tdx_2_demo_simulation_12345678";
-          setWalletAddress(demoAddress);
-          setIsConnected(true);
-          setBalance(35.5);
-          setIsLoading(false);
-          toast({
-            title: "Demo Wallet Connected",
-            description: "Connected to demo wallet (simulation mode)",
-          });
-        }, 1000);
-        return;
-      }
-      
       console.log('Manual wallet connection attempt...');
       const result = await radixService.connectWallet();
       console.log('Manual connection result:', result);
@@ -203,23 +178,19 @@ const Open = () => {
         console.error('No accounts returned from wallet connection');
         toast({
           title: "Connection Failed", 
-          description: "No wallet found or user cancelled - trying demo mode",
+          description: "No wallet found. Please install Radix Wallet extension.",
           variant: "destructive",
         });
-        setIsDemoMode(true);
       }
     } catch (error) {
       console.error('Manual wallet connection error:', error);
       toast({
         title: "Connection Failed",
-        description: "Failed to connect wallet - trying demo mode",
+        description: "Failed to connect wallet. Please try again.",
         variant: "destructive",
       });
-      setIsDemoMode(true);
     } finally {
-      if (!isDemoMode) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
@@ -256,50 +227,27 @@ const Open = () => {
       // Deduct balance immediately for UX
       setBalance(prev => prev - totalCost);
       
-      if (isDemoMode) {
-        // Demo mode: simulate transaction with booster
-        const demoTxHash = `demo_tx_${Date.now()}_${selectedTier.id}${boosterActive ? '_boosted' : ''}`;
-        setPendingTx(demoTxHash);
-        
-        playSuccess(); // Play success sound for demo
-        toast({
-          title: "Demo Transaction Submitted",
-          description: `TX: ${shortenTxHash(demoTxHash)} (simulation)`,
-        });
-        
-        // Mark today as complete for streak
-        if (!isTodayDone) {
-          markTodayComplete();
-        }
-        
-        // Simulate processing time and auto-complete
-        setTimeout(() => {
-          navigate("/reveal", { state: { tier: selectedTier, txHash: demoTxHash } });
-          setPendingTx("");
-        }, 3000);
-      } else {
-        // Call Radix Stokenet to mint badge NFT with streak multiplier
-        const txHash = await radixService.mintGachaBadge(
-          walletAddress, 
-          selectedTier.id, 
-          totalCost * streakMultiplier // Apply streak multiplier to total cost
-        );
-        
-        // Log booster state for future use
-        console.log('Mint with booster:', { booster: boosterActive, totalCost });
-        
-        setPendingTx(txHash);
-        
-        // Mark today as complete for streak
-        if (!isTodayDone) {
-          markTodayComplete();
-        }
-        
-        toast({
-          title: "Transaction Submitted",
-          description: `TX: ${shortenTxHash(txHash)}`,
-        });
+      // Call Radix Stokenet to mint badge NFT with streak multiplier
+      const txHash = await radixService.mintGachaBadge(
+        walletAddress, 
+        selectedTier.id, 
+        totalCost * streakMultiplier // Apply streak multiplier to total cost
+      );
+      
+      // Log booster state for future use
+      console.log('Mint with booster:', { booster: boosterActive, totalCost });
+      
+      setPendingTx(txHash);
+      
+      // Mark today as complete for streak
+      if (!isTodayDone) {
+        markTodayComplete();
       }
+      
+      toast({
+        title: "Transaction Submitted",
+        description: `TX: ${shortenTxHash(txHash)}`,
+      });
     } catch (error) {
       console.error('Mint failed:', error);
       // Revert balance on failure
@@ -410,11 +358,6 @@ const Open = () => {
           {!isConnected && (
             <span className="text-xs bg-red-500/80 text-white px-3 py-1 rounded-full backdrop-blur-sm">
               NOT CONNECTED
-            </span>
-          )}
-          {isDemoMode && (
-            <span className="text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full shadow-glow">
-              DEMO MODE
             </span>
           )}
           {!isOnline && (
@@ -662,28 +605,15 @@ const Open = () => {
           {isConnected && walletAddress && (
             <p className="text-green-400 text-sm font-mono">
               Connected: {walletAddress.slice(0, 20)}...
-              {isDemoMode && " (Demo)"}
             </p>
           )}
-          {!isConnected && !isDemoMode && (
+          {!isConnected && (
             <p className="text-yellow-400 text-sm">
               Make sure you have Radix Wallet installed and connected to Stokenet
             </p>
           )}
-          {isDemoMode && !isConnected && (
-            <p className="text-blue-400 text-sm">
-              Demo mode active - click Connect Wallet to simulate the experience
-            </p>
-          )}
         </div>
       </div>
-
-      {/* Demo Notification Panel (only visible in demo mode) */}
-      {isDemoMode && (
-        <div className="mt-8 relative z-10">
-          <NotificationDemo />
-        </div>
-      )}
 
       {/* Bridge Modal */}
       <BridgeModal

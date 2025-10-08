@@ -8,7 +8,6 @@ interface Wallet {
   address: string;
   balance: number;
   isConnected: boolean;
-  isDemoMode: boolean;
   isLoading: boolean;
   pendingTx: string;
 }
@@ -63,7 +62,6 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
     address: '',
     balance: 0,
     isConnected: false,
-    isDemoMode: false, // Start in REAL mode, not demo
     isLoading: false,
     pendingTx: '',
   });
@@ -161,15 +159,12 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
               ...prev,
               address,
               isConnected: true,
-              isDemoMode: false, // Real wallet connected
             }));
           } else {
             logger.warn('No Radix wallet found - user must manually connect', null, 'GachaFiContext');
-            // Don't auto-enable demo mode - wait for user action
           }
         } catch (error) {
           logger.warn('Radix wallet auto-connect failed - user must manually connect', error, 'GachaFiContext');
-          // Don't auto-enable demo mode - let user decide
         }
       } catch (error) {
         logger.error('GachaFi initialization error', error, 'GachaFiContext');
@@ -185,24 +180,20 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
 
     const fetchBalance = async () => {
       try {
-        if (wallet.isDemoMode) {
-          setWallet(prev => ({ ...prev, balance: 35.5 }));
-        } else {
-          const liveBalance = await radixService.getBalance(wallet.address);
-          setWallet(prev => ({ ...prev, balance: liveBalance }));
-        }
+        const liveBalance = await radixService.getBalance(wallet.address);
+        setWallet(prev => ({ ...prev, balance: liveBalance }));
       } catch (error) {
-        console.error('GachaFi: Error fetching balance:', error);
+        logger.error('Error fetching balance', error, 'GachaFiContext');
       }
     };
 
     fetchBalance();
-    const interval = wallet.isDemoMode ? null : setInterval(fetchBalance, 5000);
+    const interval = setInterval(fetchBalance, 5000);
 
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
-  }, [wallet.isConnected, wallet.address, wallet.isDemoMode]);
+  }, [wallet.isConnected, wallet.address]);
 
   // Check booster session reset (no persistence across sessions)
   useEffect(() => {
@@ -230,7 +221,6 @@ export const GachaFiProvider: React.FC<GachaFiProviderProps> = ({ children }) =>
           ...prev,
           address,
           isConnected: true,
-          isDemoMode: false, // Real wallet
           isLoading: false,
         }));
         

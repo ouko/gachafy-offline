@@ -25,7 +25,7 @@ interface EarningsData {
 }
 
 const Creator = () => {
-  const { address, isConnected, isDemoMode } = useWallet();
+  const { address, isConnected } = useWallet();
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -39,62 +39,28 @@ const Creator = () => {
     setIsLoading(true);
     
     try {
-      if (isDemoMode) {
-        // Demo mode: Simulate creator earnings data
-        setTimeout(() => {
-          const demoData: EarningsData = {
-            totalSpToday: 12.5,
-            totalSpAllTime: 2847.3,
-            usdEquivalent: 2847.3 * DEMO_XRD_PRICE,
-            xrdPrice: DEMO_XRD_PRICE,
-            capsules: [
-              {
-                id: 'capsule_epic_001',
-                name: 'Epic Legends',
-                totalOpens: 1245,
-                spEarnedToday: 8.2,
-                spEarnedAllTime: 1892.5,
-                lastUpdated: new Date(),
-              },
-              {
-                id: 'capsule_rare_002', 
-                name: 'Rare Artifacts',
-                totalOpens: 892,
-                spEarnedToday: 4.3,
-                spEarnedAllTime: 954.8,
-                lastUpdated: new Date(),
-              }
-            ]
-          };
-          
-          setEarningsData(demoData);
-          setLastRefresh(new Date());
-          setIsLoading(false);
-        }, 2000);
-      } else {
-        // Production mode: Read from Radix RPC
-        console.log('Fetching creator data from Radix network for:', address);
-        
-        // TODO: Implement actual on-chain reading
-        // This would involve:
-        // 1. Query user's NFT holdings to find Capsule-IDs
-        // 2. For each Capsule, read transaction history
-        // 3. Calculate 0.5% of SP from opens
-        // 4. Aggregate daily and all-time totals
-        
-        // For now, simulate with demo data
-        const simulatedData: EarningsData = {
-          totalSpToday: 0,
-          totalSpAllTime: 0,
-          usdEquivalent: 0,
-          xrdPrice: DEMO_XRD_PRICE,
-          capsules: []
-        };
-        
-        setEarningsData(simulatedData);
-        setLastRefresh(new Date());
-        setIsLoading(false);
-      }
+      // Production mode: Read from Radix RPC
+      console.log('Fetching creator data from Radix network for:', address);
+      
+      // TODO: Implement actual on-chain reading
+      // This would involve:
+      // 1. Query user's NFT holdings to find Capsule-IDs
+      // 2. For each Capsule, read transaction history
+      // 3. Calculate 0.5% of SP from opens
+      // 4. Aggregate daily and all-time totals
+      
+      // For now, return empty data
+      const simulatedData: EarningsData = {
+        totalSpToday: 0,
+        totalSpAllTime: 0,
+        usdEquivalent: 0,
+        xrdPrice: DEMO_XRD_PRICE,
+        capsules: []
+      };
+      
+      setEarningsData(simulatedData);
+      setLastRefresh(new Date());
+      setIsLoading(false);
     } catch (error) {
       console.error('Failed to fetch creator data:', error);
       setIsLoading(false);
@@ -109,7 +75,7 @@ const Creator = () => {
       const interval = setInterval(fetchCreatorData, 30000);
       return () => clearInterval(interval);
     }
-  }, [isConnected, address, isDemoMode]);
+  }, [isConnected, address]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -183,9 +149,6 @@ const Creator = () => {
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
             <span className="text-sm">
               Connected: {address?.slice(0, 20)}...
-              {isDemoMode && (
-                <Badge variant="secondary" className="ml-2">Demo Mode</Badge>
-              )}
             </span>
           </div>
         </Card>
@@ -263,10 +226,7 @@ const Creator = () => {
                   <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                   <h4 className="text-lg font-medium mb-2">No Capsules Found</h4>
                   <p className="text-muted-foreground">
-                    {isDemoMode 
-                      ? "In demo mode, you can see simulated creator data above."
-                      : "You haven't created any Capsules yet. Start creating to earn from opens!"
-                    }
+                    You haven't created any Capsules yet. Start creating to earn from opens!
                   </p>
                 </div>
               ) : (
@@ -324,7 +284,6 @@ const Creator = () => {
                   <p className="text-muted-foreground">
                     You earn 0.5% of SP from every open of your created Capsules. 
                     Earnings are calculated in real-time from on-chain transaction data.
-                    {isDemoMode && " (Currently showing demo data)"}
                   </p>
                 </div>
               </div>

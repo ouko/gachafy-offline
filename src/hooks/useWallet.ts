@@ -7,7 +7,6 @@ export const useWallet = () => {
     address: wallet.address,
     balance: wallet.balance,
     isConnected: wallet.isConnected,
-    isDemoMode: wallet.isDemoMode,
     isLoading: wallet.isLoading,
     pendingTx: wallet.pendingTx,
     connectWallet,
