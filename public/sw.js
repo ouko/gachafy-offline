@@ -1,5 +1,5 @@
 // Enhanced service worker with offline request queuing
-const CACHE_NAME = 'gachafi-poc-v3';
+const CACHE_NAME = 'gachafi-poc-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -42,10 +42,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, handle offline requests
+// Fetch event - smarter caching to avoid stale PWA and not interfere with wallet links
 self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Only handle GET
+  if (request.method !== 'GET') return;
+
   // Handle mint requests when offline
-  if (event.request.url.includes('/api/mint') && !navigator.onLine) {
+  if (request.url.includes('/api/mint') && !navigator.onLine) {
     event.respondWith(
       new Response(JSON.stringify({ queued: true }), {
         status: 202,
@@ -55,17 +60,40 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
+  const url = new URL(request.url);
+
+  // Network-first for navigations to always get the latest app shell
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cached = await caches.match('/');
+        return cached || new Response('Offline', { status: 503 });
       })
-      .catch(() => {
-        if (event.request.destination === 'document') {
-          return caches.match('/');
-        }
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for our static assets
+  const isSameOrigin = url.origin === self.location.origin;
+  const isStaticAsset = /\.(?:js|css|png|jpg|jpeg|svg|ico|webp|woff2?)$/i.test(url.pathname);
+  if (isSameOrigin && isStaticAsset) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request).then((response) => {
+          if (response && response.status === 200) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        });
+        return cached || networkFetch;
       })
-  );
+    );
+    return;
+  }
+
+  // Default: just fetch (don’t cache cross-origin e.g., Radix endpoints, wallet links)
+  event.respondWith(fetch(request));
 });
 
 // Listen for online events to process queued requests
