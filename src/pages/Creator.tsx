@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { TrendingUp, Coins, DollarSign, Zap, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { RadixConnectButton } from '@/components/RadixConnectButton';
 
 interface CapsuleData {
   id: string;
@@ -94,16 +95,16 @@ const Creator = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="p-8 text-center max-w-md">
-          <div className="mb-4">
+          <div className="mb-6">
             <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h1 className="text-2xl font-bold mb-2">Creator Dashboard</h1>
             <p className="text-muted-foreground">
-              Connect your wallet to view your Capsule earnings and creator statistics.
+              Connect your Radix wallet to view your Capsule earnings and creator statistics.
             </p>
           </div>
-          <Button onClick={() => window.location.href = '/open'} className="w-full">
-            Connect Wallet
-          </Button>
+          <div className="flex justify-center">
+            <RadixConnectButton />
+          </div>
         </Card>
       </div>
     );

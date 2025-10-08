@@ -548,7 +548,7 @@ const Open = () => {
               "holographic-button min-w-[280px] h-20 text-xl font-bold rounded-3xl transition-all duration-500 border-2 border-white/30 backdrop-blur-sm tracking-wider",
               !canAfford && isConnected && "opacity-50 cursor-not-allowed grayscale"
             )}
-            disabled={isProcessing || (!isConnected ? false : !canAfford)}
+            disabled={isProcessing || !isConnected || (!isConnected ? true : !canAfford)}
             onClick={openBox}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
@@ -564,7 +564,7 @@ const Open = () => {
             ) : !isConnected ? (
               <div className="flex items-center gap-3">
                 <Sparkles size={20} className="animate-pulse" />
-                <span className="tracking-wider">Connect Wallet</span>
+                <span className="tracking-wider">Please Connect Wallet</span>
                 <Sparkles size={20} className="animate-pulse" />
               </div>
             ) : !canAfford ? (
