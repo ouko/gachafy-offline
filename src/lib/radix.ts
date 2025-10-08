@@ -1,4 +1,8 @@
 import { RadixDappToolkit, RadixNetwork } from '@radixdlt/radix-dapp-toolkit';
+import { withRetry, withTimeout, NetworkError, TransactionError } from './errorHandling';
+import { validateInput, walletAddressSchema, balanceSchema, nonceSchema } from './validation';
+import { logger } from './logger';
+import { rateLimiter } from './rateLimiter';
 
 // Stokenet configuration
 export const STOKENET_CONFIG = {
@@ -23,7 +27,8 @@ class RadixService {
     if (this.initialized) return;
 
     try {
-      console.log('Initializing Radix DApp Toolkit...');
+      logger.info('Initializing Radix DApp Toolkit', null, 'RadixService');
+      
       this.rdt = RadixDappToolkit({
         dAppDefinitionAddress: STOKENET_CONFIG.dAppDefinitionAddress,
         networkId: STOKENET_CONFIG.networkId,
@@ -31,68 +36,103 @@ class RadixService {
         applicationVersion: '1.0.0',
       });
 
-      console.log('Radix DApp Toolkit initialized successfully');
+      logger.info('Radix DApp Toolkit initialized successfully', null, 'RadixService');
       this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize Radix DApp Toolkit:', error);
-      throw error;
+      logger.error('Failed to initialize Radix DApp Toolkit', error, 'RadixService');
+      throw new NetworkError('Failed to initialize wallet connection');
     }
   }
 
   async connectWallet(): Promise<any> {
     if (!this.rdt) await this.initialize();
     
+    // Rate limit check
+    if (!rateLimiter.check('wallet_connect', { maxRequests: 3, windowMs: 60000, keyPrefix: 'radix' })) {
+      logger.warn('Wallet connection rate limited', null, 'RadixService');
+      return null;
+    }
+
     try {
-      console.log('Attempting wallet connection...');
+      logger.info('Attempting wallet connection', null, 'RadixService');
       
-      // Request login with accounts
       const result = await this.rdt!.walletApi.setRequestData({
         accounts: { quantifier: 'atLeast', quantity: 1 },
       });
 
-      console.log('Wallet connection result:', result);
+      logger.info('Wallet connection successful', null, 'RadixService');
       return result;
     } catch (error) {
-      console.error('Wallet connection error:', error);
+      logger.error('Wallet connection failed', error, 'RadixService');
       return null;
     }
   }
 
   async getBalance(accountAddress: string): Promise<number> {
-    try {
-      const response = await fetch(`${STOKENET_CONFIG.gatewayUrl}/state/entity/details`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          addresses: [accountAddress],
-          aggregation_level: 'Vault',
-          opt_ins: {
-            fungible_resource_balances: true,
-          },
-        }),
-      });
+    // Validate input
+    validateInput(walletAddressSchema, accountAddress, 'Invalid wallet address');
+    
+    return await withRetry(
+      async () => {
+        const response = await withTimeout(
+          fetch(`${STOKENET_CONFIG.gatewayUrl}/state/entity/details`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              addresses: [accountAddress],
+              aggregation_level: 'Vault',
+              opt_ins: {
+                fungible_resource_balances: true,
+              },
+            }),
+          }),
+          10000,
+          'Balance fetch timed out'
+        );
 
-      const data = await response.json();
-      const fungibleResources = data.items[0]?.fungible_resources?.items || [];
-      
-      const xrdBalance = fungibleResources.find(
-        (resource: any) => resource.resource_address === XRD_RESOURCE_ADDRESS
-      );
+        if (!response.ok) {
+          throw new NetworkError(`Failed to fetch balance: ${response.statusText}`);
+        }
 
-      return xrdBalance ? parseFloat(xrdBalance.amount) / Math.pow(10, 18) : 0;
-    } catch (error) {
-      console.error('Error fetching balance:', error);
+        const data = await response.json();
+        const fungibleResources = data.items[0]?.fungible_resources?.items || [];
+        
+        const xrdBalance = fungibleResources.find(
+          (resource: any) => resource.resource_address === XRD_RESOURCE_ADDRESS
+        );
+
+        const balance = xrdBalance ? parseFloat(xrdBalance.amount) / Math.pow(10, 18) : 0;
+        
+        // Validate balance
+        return validateInput(balanceSchema, balance, 'Invalid balance received');
+      },
+      { maxAttempts: 3, delayMs: 1000 }
+    ).catch(error => {
+      logger.error('Error fetching balance', error, 'RadixService');
       return 0;
-    }
+    });
   }
 
   async mintGachaBadge(accountAddress: string, tier: string, amount: number): Promise<string> {
     if (!this.rdt) await this.initialize();
 
+    // Validate inputs
+    validateInput(walletAddressSchema, accountAddress, 'Invalid wallet address');
+    validateInput(balanceSchema, amount, 'Invalid amount');
+    
+    if (!['common', 'rare', 'epic'].includes(tier)) {
+      throw new TransactionError('Invalid tier');
+    }
+
+    // Rate limit minting
+    if (!rateLimiter.check(`mint_${accountAddress}`, { maxRequests: 5, windowMs: 60000, keyPrefix: 'mint' })) {
+      throw new TransactionError('Too many mint requests. Please wait before trying again.');
+    }
+
     // Generate a simple nonce for VDF (in real implementation, this would be more complex)
-    const nonce = Math.floor(Math.random() * 1000000);
+    const nonce = validateInput(nonceSchema, Math.floor(Math.random() * 1000000));
     
     // Create the transaction manifest
     const manifest = `
@@ -121,40 +161,55 @@ class RadixService {
     `;
 
     try {
+      logger.info('Submitting mint transaction', { tier, amount }, 'RadixService');
+      
       const result = await this.rdt!.walletApi.sendTransaction({
         transactionManifest: manifest,
         version: 1,
       });
 
-      return (result as any)?.value?.transactionIntentHash || 'mock_tx_' + Date.now();
+      const txHash = (result as any)?.value?.transactionIntentHash || 'mock_tx_' + Date.now();
+      logger.info('Transaction submitted', { txHash }, 'RadixService');
+      
+      return txHash;
     } catch (error) {
-      console.error('Transaction error:', error);
-      // Return a mock transaction hash for development
-      return 'mock_tx_' + Date.now();
+      logger.error('Transaction submission failed', error, 'RadixService');
+      throw new TransactionError('Failed to submit transaction');
     }
   }
 
   async getTransactionStatus(txHash: string): Promise<'success' | 'failed' | 'pending'> {
-    try {
-      const response = await fetch(`${STOKENET_CONFIG.gatewayUrl}/transaction/status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          intent_hash: txHash,
-        }),
-      });
+    return await withRetry(
+      async () => {
+        const response = await withTimeout(
+          fetch(`${STOKENET_CONFIG.gatewayUrl}/transaction/status`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              intent_hash: txHash,
+            }),
+          }),
+          10000,
+          'Transaction status check timed out'
+        );
 
-      const data = await response.json();
-      
-      if (data.status === 'CommittedSuccess') return 'success';
-      if (data.status === 'CommittedFailure') return 'failed';
-      return 'pending';
-    } catch (error) {
-      console.error('Error checking transaction status:', error);
-      return 'pending';
-    }
+        if (!response.ok) {
+          throw new NetworkError('Failed to check transaction status');
+        }
+
+        const data = await response.json();
+        
+        if (data.status === 'CommittedSuccess') return 'success';
+        if (data.status === 'CommittedFailure') return 'failed';
+        return 'pending';
+      },
+      { maxAttempts: 2, delayMs: 500 }
+    ).catch(error => {
+      logger.warn('Error checking transaction status', error, 'RadixService');
+      return 'pending' as const;
+    });
   }
 
   // Creator earnings methods
