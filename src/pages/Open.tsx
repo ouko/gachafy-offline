@@ -525,16 +525,11 @@ const Open = () => {
         {/* Enhanced CTA Button */}
         <div className="mt-12 flex justify-center">
           {!isConnected ? (
-            /* Connect Button - explicit wallet request */
+            /* Radix Connect Button - supports mobile deep linking */
             <div className="flex flex-col items-center gap-4">
-              <Button
-                size="lg"
-                className="min-w-[240px]"
-                onClick={connectWallet}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Connecting…' : 'Connect Wallet'}
-              </Button>
+              <div className="transform scale-150">
+                <radix-connect-button />
+              </div>
               <p className="text-muted-foreground text-sm">
                 Connect your Radix wallet to start opening boxes
               </p>
