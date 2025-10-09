@@ -38,3 +38,14 @@ export const setupPWAInstall = () => {
     }
   };
 };
+
+// Detect if running as an installed PWA (standalone/app window)
+export const isStandalone = (): boolean => {
+  // iOS Safari uses navigator.standalone, others support display-mode media query
+  // @ts-ignore - standalone is not in the TS lib
+  return (
+    (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches) ||
+    // @ts-ignore
+    (typeof window !== 'undefined' && (navigator as any)?.standalone === true)
+  );
+};

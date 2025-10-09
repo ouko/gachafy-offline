@@ -3,6 +3,8 @@ import { useWallet } from "@/hooks/useWallet";
 import { useState } from "react";
 import { RadixWalletPrompt } from "./RadixWalletPrompt";
 import { toast } from "sonner";
+import { isStandalone } from "@/utils/pwa";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Radix √ Connect Button - Following Radix DLT branding guidelines
@@ -13,26 +15,34 @@ import { toast } from "sonner";
 export const RadixConnectButton = () => {
   const { address, isConnected, connectWallet, balance, isLoading } = useWallet();
   const [showWalletPrompt, setShowWalletPrompt] = useState(false);
+  const isMobile = useIsMobile();
 
-  const handleConnect = async () => {
+const handleConnect = async () => {
+  // In installed PWA windows on desktop, browser extensions are unavailable
+  if (isStandalone() && !isMobile) {
+    toast.info("Open in browser to connect wallet", {
+      description: "Extensions are disabled in installed PWAs.",
+      duration: 4000,
+    });
     try {
-      await connectWallet();
-      toast.success("Wallet connected!", {
-        duration: 3000,
-      });
-    } catch (error: any) {
-      // Don't show toast for install errors - show the modal instead
-      if (error.message?.includes('install') || error.message?.includes('Wallet')) {
-        setShowWalletPrompt(true);
-      } else {
-        // Show toast only for actual connection errors
-        toast.error("Connection failed", {
-          description: "Please try again",
-          duration: 4000,
-        });
-      }
+      window.open(window.location.href, "_blank", "noopener,noreferrer");
+    } catch {}
+    return;
+  }
+
+  try {
+    await connectWallet();
+    toast.success("Wallet connected!", { duration: 3000 });
+  } catch (error: any) {
+    // Don't show toast for install errors - show the modal instead
+    if (error?.message?.includes('install') || error?.message?.includes('Wallet')) {
+      setShowWalletPrompt(true);
+    } else {
+      // Show toast only for actual connection errors
+      toast.error("Connection failed", { description: "Please try again", duration: 4000 });
     }
-  };
+  }
+};
 
   if (isConnected && address) {
     // Connected state - show wallet info
