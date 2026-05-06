@@ -5,7 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  { ignores: ["dist", "node_modules", "public/sw.js", "public/OneSignalSDKWorker.js"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -21,6 +21,20 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // The codebase intentionally accepts `any` at boundaries with the
+      // Radix Gateway and Wallet API (third-party shapes change between
+      // toolkit versions). Surface as a warning so it stays visible without
+      // failing CI.
+      "@typescript-eslint/no-explicit-any": "warn",
+      // shadcn/ui templates rely on empty extension interfaces.
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+  },
+  {
+    // tailwind.config.ts uses CommonJS require() for plugins.
+    files: ["tailwind.config.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 );

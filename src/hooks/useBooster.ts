@@ -1,7 +1,7 @@
-import { useGachaFi } from '@/contexts/GachaFiContext';
+import { useGameContext } from "@/contexts/GameContext";
 
 export const useBooster = () => {
-  const { booster, toggleBooster } = useGachaFi();
+  const { booster, toggleBooster } = useGameContext();
 
   return {
     isActive: booster.isActive,

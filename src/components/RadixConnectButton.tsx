@@ -26,16 +26,19 @@ const handleConnect = async () => {
     });
     try {
       window.open(window.location.href, "_blank", "noopener,noreferrer");
-    } catch {}
+    } catch {
+      // Pop-up blocked — silently fall through; the toast already explained.
+    }
     return;
   }
 
   try {
     await connectWallet();
     toast.success("Wallet connected!", { duration: 3000 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Don't show toast for install errors - show the modal instead
-    if (error?.message?.includes('install') || error?.message?.includes('Wallet')) {
+    const msg = error instanceof Error ? error.message : '';
+    if (msg.includes('install') || msg.includes('Wallet')) {
       setShowWalletPrompt(true);
     } else {
       // Show toast only for actual connection errors

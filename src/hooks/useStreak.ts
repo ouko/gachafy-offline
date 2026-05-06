@@ -1,7 +1,7 @@
-import { useGachaFi } from '@/contexts/GachaFiContext';
+import { useGameContext } from "@/contexts/GameContext";
 
 export const useStreak = () => {
-  const { streak, markTodayComplete } = useGachaFi();
+  const { streak, markTodayComplete } = useGameContext();
 
   return {
     streak: streak.current,

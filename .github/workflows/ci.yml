@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -6,18 +6,26 @@ on:
   pull_request:
     branches: [main, develop]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+permissions:
+  contents: read
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint, type-check, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -27,46 +35,70 @@ jobs:
         run: npm run check
 
       - name: Lint
-        run: npm run lint || true
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --run
 
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_ONESIGNAL_APP_ID: ${{ secrets.VITE_ONESIGNAL_APP_ID }}
+          VITE_ONESIGNAL_SAFARI_WEB_ID: ${{ secrets.VITE_ONESIGNAL_SAFARI_WEB_ID }}
+          VITE_RADIX_NETWORK: ${{ vars.VITE_RADIX_NETWORK || 'stokenet' }}
+          VITE_RADIX_DAPP_DEFINITION: ${{ secrets.VITE_RADIX_DAPP_DEFINITION }}
+          VITE_RADIX_GATEWAY_URL: ${{ vars.VITE_RADIX_GATEWAY_URL }}
+          VITE_GACHA_PACKAGE_ADDRESS: ${{ vars.VITE_GACHA_PACKAGE_ADDRESS }}
+          VITE_GACHA_COMPONENT_ADDRESS: ${{ vars.VITE_GACHA_COMPONENT_ADDRESS }}
+          VITE_XRD_RESOURCE_ADDRESS: ${{ vars.VITE_XRD_RESOURCE_ADDRESS }}
+          VITE_FEATURE_BRIDGE: ${{ vars.VITE_FEATURE_BRIDGE || 'false' }}
+          VITE_FEATURE_OFFLINE_QUEUE: ${{ vars.VITE_FEATURE_OFFLINE_QUEUE || 'false' }}
+          VITE_FEATURE_CREATOR_DASHBOARD: ${{ vars.VITE_FEATURE_CREATOR_DASHBOARD || 'true' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
 
-  deploy-preview:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check bundle size
+        run: npm run check:bundle
 
-      - name: Deploy to Vercel Preview
-        uses: amondnet/vercel-action@v20
+      - name: Upload build artefact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+          name: dist
+          path: dist
+          retention-days: 7
 
-  deploy-production:
-    needs: test
+  audit:
+    name: Dependency audit
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Deploy to Vercel Production
-        uses: amondnet/vercel-action@v20
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan with TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --only-verified

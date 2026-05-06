@@ -1,207 +1,113 @@
 import OneSignal from 'react-onesignal';
+import { logger } from './logger';
 
+/**
+ * OneSignal wrapper.
+ *
+ * If VITE_ONESIGNAL_APP_ID is not set, every method becomes a no-op so the
+ * rest of the app can still run (notifications just don't appear). The
+ * "demo mode" of the previous implementation has been removed — it
+ * masqueraded as working push, which is worse than no push.
+ *
+ * NOTE: scheduled daily reminders cannot be implemented client-side via
+ * setTimeout — the page is closed by then. Real scheduled push must be
+ * driven from a backend (OneSignal REST API or scheduled job). The
+ * client-side helper below requests permission and registers the device;
+ * actual reminders need server work.
+ */
 export class OneSignalService {
   private isInitialized = false;
-  private appId = ''; // Will be set from environment or demo mode
+  private appId = import.meta.env.VITE_ONESIGNAL_APP_ID || '';
+  private safariWebId = import.meta.env.VITE_ONESIGNAL_SAFARI_WEB_ID || '';
 
-  async initialize() {
+  get isConfigured(): boolean {
+    return Boolean(this.appId);
+  }
+
+  async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
+    if (!this.isConfigured) {
+      logger.info('OneSignal disabled (VITE_ONESIGNAL_APP_ID not set)', null, 'OneSignal');
+      this.isInitialized = true;
+      return;
+    }
+
     try {
-      // Demo mode configuration - in production, use your actual OneSignal App ID
-      const demoAppId = 'demo-onesignal-app-id';
-      
       await OneSignal.init({
-        appId: demoAppId,
-        safari_web_id: demoAppId,
-        allowLocalhostAsSecureOrigin: true, // For development
+        appId: this.appId,
+        ...(this.safariWebId ? { safari_web_id: this.safariWebId } : {}),
+        allowLocalhostAsSecureOrigin: import.meta.env.DEV,
+      });
+
+      OneSignal.Notifications.addEventListener('click', (event) => {
+        logger.info('OneSignal notification clicked', { event }, 'OneSignal');
+        if (typeof window === 'undefined') return;
+
+        // Validate the notification URL before navigation to prevent
+        // open redirects if the OneSignal account is compromised.
+        const url = event.result?.url;
+        if (url) {
+          try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.origin !== window.location.origin) {
+              logger.warn('Rejecting external notification URL', { url }, 'OneSignal');
+              return;
+            }
+            window.location.href = parsed.pathname + parsed.search;
+            return;
+          } catch {
+            logger.warn('Malformed notification URL', { url }, 'OneSignal');
+            return;
+          }
+        }
+
+        window.location.href = '/open';
       });
 
       this.isInitialized = true;
-      console.log('OneSignal initialized successfully');
-      
-      // Set up notification click handler for deep linking
-      OneSignal.Notifications.addEventListener('click', (event) => {
-        console.log('OneSignal notification clicked:', event);
-        
-        // Navigate to /open on notification click
-        if (typeof window !== 'undefined') {
-          window.location.href = '/open';
-        }
-      });
-
+      logger.info('OneSignal initialized', null, 'OneSignal');
     } catch (error) {
-      console.error('OneSignal initialization failed:', error);
-      // In demo mode, we'll simulate the functionality
+      logger.error('OneSignal initialization failed', error, 'OneSignal');
+      // Mark initialized to avoid retry loops on every wallet connect.
       this.isInitialized = true;
     }
   }
 
   async requestPermission(): Promise<boolean> {
     if (!this.isInitialized) await this.initialize();
+    if (!this.isConfigured) return false;
 
     try {
-      // Request permission using browser API for demo
+      // Use the browser API for the prompt — OneSignal will pick up the
+      // resulting subscription state.
       const permission = await Notification.requestPermission();
-      const isGranted = permission === 'granted';
-      
-      console.log('Notification permission result:', permission);
-      
-      if (isGranted) {
-        // Send welcome notification
-        await this.sendWelcomeNotification();
-        
-        // Schedule daily reminders
-        await this.scheduleDailyReminders();
-      }
-      
-      return isGranted;
+      return permission === 'granted';
     } catch (error) {
-      console.error('OneSignal permission request failed:', error);
-      
-      // Demo mode: simulate permission granted
-      console.log('Demo mode: Simulating notification permission granted');
-      await this.sendWelcomeNotification();
-      await this.scheduleDailyReminders();
-      return true;
+      logger.error('Notification permission request failed', error, 'OneSignal');
+      return false;
     }
-  }
-
-  private async sendWelcomeNotification() {
-    try {
-      // In production, this would be sent from your backend
-      console.log('Demo: Would send welcome notification');
-      
-      // Simulate welcome notification in demo mode
-      if (this.isDemoMode()) {
-        this.showDemoNotification(
-          'Welcome to GachaFi!',
-          'Daily streak reminders are now active. Keep your momentum going!'
-        );
-      }
-    } catch (error) {
-      console.error('Failed to send welcome notification:', error);
-    }
-  }
-
-  async scheduleDailyReminders() {
-    try {
-      // In OneSignal, daily notifications are typically set up via API or dashboard
-      // For demo purposes, we'll simulate the scheduling logic
-      
-      console.log('Demo: Scheduling daily 20:00 streak reminders');
-      
-      // Calculate time until next 20:00
-      const now = new Date();
-      const next8PM = new Date();
-      next8PM.setHours(20, 0, 0, 0);
-      
-      // If it's past 8 PM today, schedule for tomorrow
-      if (now.getTime() > next8PM.getTime()) {
-        next8PM.setDate(next8PM.getDate() + 1);
-      }
-      
-      const timeUntilNext = next8PM.getTime() - now.getTime();
-      
-      // Demo: Schedule notification check
-      setTimeout(() => {
-        this.checkAndSendDailyReminder();
-      }, timeUntilNext);
-      
-      console.log(`Demo: Next streak reminder scheduled for ${next8PM.toLocaleString()}`);
-      
-    } catch (error) {
-      console.error('Failed to schedule daily reminders:', error);
-    }
-  }
-
-  private async checkAndSendDailyReminder() {
-    try {
-      // Check if user already opened today
-      const todayKey = new Date().toISOString().split('T')[0];
-      const lastOpenDate = localStorage.getItem('lastOpenDate');
-      
-      if (lastOpenDate === todayKey) {
-        console.log('Demo: User already opened today, skipping reminder');
-        return;
-      }
-      
-      // Check streak status
-      const streakMap = JSON.parse(localStorage.getItem('streakMap') || '[0,0,0,0,0,0,0]');
-      const todayIndex = new Date().getUTCDay();
-      const isTodayDone = streakMap[todayIndex] === 1;
-      
-      if (isTodayDone) {
-        console.log('Demo: Streak already completed today, skipping reminder');
-        return;
-      }
-      
-      // Send reminder notification
-      if (this.isDemoMode()) {
-        this.showDemoNotification(
-          'Your streak ends in 3h – swipe now!',
-          'Keep your GachaFi momentum going!'
-        );
-      } else {
-        // In production, this would be sent from your backend via OneSignal API
-        console.log('Would send daily reminder via OneSignal API');
-      }
-      
-      // Schedule next day's reminder
-      setTimeout(() => {
-        this.checkAndSendDailyReminder();
-      }, 24 * 60 * 60 * 1000); // 24 hours
-      
-    } catch (error) {
-      console.error('Failed to check and send daily reminder:', error);
-    }
-  }
-
-  private showDemoNotification(title: string, body: string) {
-    // Demo mode: Show browser notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
-        body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        tag: 'gachaFi-streak',
-        requireInteraction: false,
-        data: {
-          url: '/open'
-        }
-      });
-    } else {
-      // Fallback: Log to console
-      console.log(`Demo Notification: ${title} - ${body}`);
-    }
-  }
-
-  private isDemoMode(): boolean {
-    // Check if we're in demo mode (no real OneSignal app ID)
-    return !this.appId || this.appId.includes('demo');
   }
 
   async getPlayerId(): Promise<string | null> {
+    if (!this.isInitialized) await this.initialize();
+    if (!this.isConfigured) return null;
     try {
-      if (!this.isInitialized) await this.initialize();
-      
-      const userId = await OneSignal.User.PushSubscription.id;
-      return userId || 'demo-player-id';
+      const id = await OneSignal.User.PushSubscription.id;
+      return id ?? null;
     } catch (error) {
-      console.error('Failed to get OneSignal player ID:', error);
-      return 'demo-player-id';
+      logger.error('Failed to get OneSignal player ID', error, 'OneSignal');
+      return null;
     }
   }
 
   async isSubscribed(): Promise<boolean> {
+    if (!this.isInitialized) await this.initialize();
+    if (!this.isConfigured) return false;
     try {
-      if (!this.isInitialized) await this.initialize();
-      
-      // Use browser notification permission for demo
-      const permission = Notification.permission;
-      return permission === 'granted';
+      return Notification.permission === 'granted';
     } catch (error) {
-      console.error('Failed to check subscription status:', error);
+      logger.error('Failed to check subscription status', error, 'OneSignal');
       return false;
     }
   }

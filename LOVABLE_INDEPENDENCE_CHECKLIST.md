@@ -40,18 +40,7 @@ cat .env .env.example | grep -i lovable
 
 ### Services You Own (Not Lovable)
 
-#### 1. Supabase
-```bash
-# Check Supabase project ownership
-# Login: https://supabase.com/dashboard
-# Project: ibicvmavajmuoygedeyw
-```
-- [x] Owned by your account
-- [x] Can export data anytime
-- [x] Can migrate to self-hosted PostgreSQL
-- [x] See: `DATABASE_ALTERNATIVES.md`
-
-#### 2. OneSignal (Optional)
+#### 1. OneSignal (Optional)
 ```bash
 # Check OneSignal ownership
 # Login: https://onesignal.com/
@@ -60,7 +49,7 @@ cat .env .env.example | grep -i lovable
 - [x] Can remove completely
 - [x] Alternative: Native Web Push API
 
-#### 3. Radix DLT (Decentralized)
+#### 2. Radix DLT (Decentralized)
 - [x] No account needed (decentralized blockchain)
 - [x] Can switch to any blockchain
 - [x] Alternative: Ethereum, Polygon, Solana
@@ -110,8 +99,7 @@ netlify deploy
 
 # Check all network requests:
 # Expected: Only calls to:
-# - Supabase (if configured)
-# - Radix Gateway (stokenet.radixdlt.com)
+# - Radix Gateway (stokenet.radixdlt.com or mainnet.radixdlt.com)
 # - OneSignal (if configured)
 # - NO calls to lovable.dev or lovable APIs
 ```
@@ -129,7 +117,6 @@ netlify deploy
 - [x] `.env.example` - Environment template
 
 ### Service Alternatives Documented
-- [x] Supabase → PostgreSQL, Firebase, MongoDB, PlanetScale
 - [x] OneSignal → Firebase FCM, Web Push, Pusher
 - [x] Radix → Ethereum, Polygon, Solana, any blockchain
 
@@ -137,7 +124,7 @@ netlify deploy
 
 ### Your Data, Your Control
 - [x] **Source Code**: In your GitHub repo (you own it)
-- [x] **Database**: Your Supabase project (you own it)
+- [x] **Local Data**: User device (IndexedDB / localStorage)
 - [x] **Wallet Keys**: User's device (decentralized)
 - [x] **Build Artifacts**: Generated locally (you own them)
 - [x] **Domain**: Your domain registrar (you own it)
@@ -168,10 +155,7 @@ npm run build
 # 4. Can still deploy
 vercel deploy
 
-# 5. Supabase still works (your account)
-# Login: https://supabase.com
-
-# 6. App still runs (fully functional)
+# 5. App still runs (fully functional)
 ```
 
 ✅ **Result**: App works perfectly, forever

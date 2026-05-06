@@ -2,114 +2,128 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import mythicBadge from "@/assets/mythic-badge.png";
-import { shortenTxHash } from "@/lib/radix";
+import { shortenTxHash } from "@/lib/radix-config";
+import { Gem, Star, Crown, LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Tier {
+  id: 'common' | 'rare' | 'epic';
+  name: string;
+  price: number;
+  rarity: 'common' | 'rare' | 'epic';
+}
+
+const TIER_REWARD: Record<Tier['rarity'], { sp: number; gradient: string; icon: LucideIcon; label: string }> = {
+  common: { sp: 100, gradient: 'from-slate-300 via-slate-400 to-slate-500', icon: Gem, label: 'Common Badge' },
+  rare:   { sp: 350, gradient: 'from-blue-300 via-blue-400 to-purple-500',  icon: Star, label: 'Rare Badge' },
+  epic:   { sp: 1000, gradient: 'from-purple-300 via-pink-400 to-red-400',  icon: Crown, label: 'Epic Badge' },
+};
 
 const Reveal = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const tier = location.state?.tier;
-  const txHash = location.state?.txHash;
+  const tier = location.state?.tier as Tier | undefined;
+  const txHash = location.state?.txHash as string | undefined;
   const [spCount, setSpCount] = useState(0);
   const [showBadge, setShowBadge] = useState(false);
 
+  const reward = tier ? TIER_REWARD[tier.rarity] : null;
+  const target = reward?.sp ?? 0;
+
   useEffect(() => {
-    if (!tier) {
-      navigate("/open");
+    if (!tier || !reward) {
+      navigate('/open');
       return;
     }
 
-    // Show badge with zoom-in animation
     setTimeout(() => setShowBadge(true), 100);
 
-    // Animate SP counter from 0 to 1000 over 600ms
     const startTime = Date.now();
     const duration = 600;
-    const target = 1000;
-
-    const animateCounter = () => {
+    const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setSpCount(Math.floor(easeOut * target));
-
-      if (progress < 1) {
-        requestAnimationFrame(animateCounter);
-      }
+      if (progress < 1) requestAnimationFrame(animate);
     };
+    setTimeout(animate, 400);
 
-    setTimeout(() => {
-      animateCounter();
-    }, 400); // Start after badge appears
+    // No auto-redirect — user controls when to leave the reveal screen.
+  }, [tier, reward, target, navigate]);
 
-    // Auto-timer to go back to /open after 3s
-    const timer = setTimeout(() => {
-      navigate("/open");
-    }, 3000);
+  const shareText = tier
+    ? `🔥 I just opened a ${tier.name} GachaFi box and earned ${target.toLocaleString()} SP!`
+    : '🔥 GachaFi';
 
-    return () => clearTimeout(timer);
-  }, [tier, navigate]);
-
-  const shareOnTikTok = async () => {
+  const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          text: "🔥 I just opened a Mythic box! #MysteryChain",
-        });
-      } catch (error) {
-        console.log("Share canceled");
+        await navigator.share({ text: shareText });
+      } catch {
+        // User cancelled — fine.
       }
-    } else {
-      // Fallback for desktop
-      navigator.clipboard.writeText("🔥 I just opened a Mythic box! #MysteryChain");
+    } else if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(shareText);
+      } catch {
+        // ignore clipboard failures
+      }
     }
   };
 
-  if (!tier) {
-    return null;
-  }
+  if (!tier || !reward) return null;
+
+  const Icon = reward.icon;
 
   return (
     <main className="min-h-screen gradient-reveal flex flex-col items-center justify-center p-4">
-      {/* Badge with zoom-in animation */}
-      <div className="mb-8">
-        <img 
+      <div className="mb-8 relative">
+        <img
           src={mythicBadge}
-          alt="Mythic Badge"
+          alt={reward.label}
           className={`w-[200px] h-[200px] object-contain transition-all duration-400 ${
             showBadge ? 'animate-zoom-in' : 'scale-0 opacity-0'
           }`}
         />
+        <div
+          className={cn(
+            'absolute inset-0 -z-10 rounded-full blur-2xl opacity-70 bg-gradient-to-br',
+            reward.gradient,
+          )}
+        />
       </div>
 
-      {/* SP Counter */}
+      <div className="mb-2 flex items-center gap-2 text-white/80">
+        <Icon className="w-5 h-5" />
+        <span className="text-lg uppercase tracking-widest">{reward.label}</span>
+      </div>
+
       <div className="mb-8 text-center">
         <div className="text-6xl font-bold text-white mb-2 animate-count-up">
           {spCount.toLocaleString()}
         </div>
-        <div className="text-xl text-purple-200">
-          SP Earned
-        </div>
+        <div className="text-xl text-purple-200">SP Earned</div>
       </div>
 
-      {/* Transaction Hash Pill */}
       {txHash && (
         <div className="mb-4 bg-white/10 text-white px-4 py-2 rounded-full text-sm font-mono">
           TX: {shortenTxHash(txHash)}
         </div>
       )}
 
-      {/* Share Button */}
-      <Button 
-        onClick={shareOnTikTok}
-        className="mb-4 bg-white text-black hover:bg-gray-100 font-semibold px-8 py-3"
-      >
-        Share on TikTok
-      </Button>
-
-      {/* Auto-return hint */}
-      <p className="text-purple-200 text-sm opacity-75">
-        Returning to boxes in 3 seconds...
-      </p>
+      <div className="flex flex-col items-center gap-3">
+        <Button onClick={handleShare} className="bg-white text-black hover:bg-gray-100 font-semibold px-8 py-3">
+          Share
+        </Button>
+        <Button
+          onClick={() => navigate('/open', { replace: true })}
+          variant="outline"
+          className="border-white/30 text-white hover:bg-white/10 px-8 py-3"
+        >
+          Open Another Box
+        </Button>
+      </div>
     </main>
   );
 };

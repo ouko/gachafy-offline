@@ -18,8 +18,8 @@ export const NotificationDemo = () => {
       
       if (granted) {
         toast({
-          title: "Push Notifications Enabled!",
-          description: "You'll receive daily streak reminders at 8 PM",
+          title: "Push Notifications Enabled",
+          description: "You'll get a notification when reminders are scheduled.",
         });
       }
     } catch (error) {
@@ -88,9 +88,8 @@ export const NotificationDemo = () => {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Daily reminders at 20:00 local time: "Your streak ends in 3h – swipe now!"
-            <br />
-            Notifications are automatically canceled if you've already opened today.
+            Reminders are sent from the server when configured. Use "Test
+            Notification" above to confirm the device is registered.
           </p>
         </div>
       </Card>

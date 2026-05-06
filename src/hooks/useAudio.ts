@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface AudioSettings {
   enabled: boolean;
@@ -13,9 +13,20 @@ export const useAudio = () => {
 
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
+
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return null;
+      audioContextRef.current = new AC();
     }
     return audioContextRef.current;
   }, []);
@@ -25,6 +36,7 @@ export const useAudio = () => {
     if (!settings.enabled) return;
 
     const audioContext = getAudioContext();
+    if (!audioContext) return;
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -47,6 +59,7 @@ export const useAudio = () => {
     if (!settings.enabled) return;
 
     const audioContext = getAudioContext();
+    if (!audioContext) return;
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 

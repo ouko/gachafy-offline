@@ -21,33 +21,15 @@ Your GachaFi application is **completely independent** of Lovable and can run an
 ✅ **No Lovable services** required for app to run  
 ✅ **Standard Vite/React** configuration  
 ✅ **All services you control**:
-  - Supabase (your own project)
   - OneSignal (optional, your account)
   - Radix DLT (decentralized blockchain)
+  - Static hosting (your choice)
 
 **Note**: `lovable-tagger` is a dev-only tool that enhances the Lovable editor experience. It's never included in production builds and your app runs identically with or without it.
 
 ## Services You Control
 
-### 1. Supabase (Backend/Database)
-**Provider**: Supabase.com  
-**Your Control**: Full ownership of project  
-**Cost**: Free tier → $25/mo Pro  
-**Alternatives**: See [DATABASE_ALTERNATIVES.md](./DATABASE_ALTERNATIVES.md)
-
-```bash
-# Your Supabase Project
-Project ID: ibicvmavajmuoygedeyw
-URL: https://ibicvmavajmuoygedeyw.supabase.co
-Status: Active, you own it
-```
-
-**If Supabase Goes Down**:
-- Export data: `supabase db dump > backup.sql`
-- Migrate to: PostgreSQL, Firebase, MongoDB, PlanetScale
-- See DATABASE_ALTERNATIVES.md for step-by-step migration
-
-### 2. OneSignal (Push Notifications) - Optional
+### 1. OneSignal (Push Notifications) - Optional
 **Provider**: OneSignal.com  
 **Your Control**: Your account, your API keys  
 **Cost**: Free up to 10k users  
@@ -60,7 +42,7 @@ Status: Active, you own it
 // Optional feature, not required
 ```
 
-### 3. Radix DLT (Blockchain)
+### 2. Radix DLT (Blockchain)
 **Provider**: Radix Foundation (decentralized)  
 **Your Control**: Fully decentralized, no single point of control  
 **Cost**: Free (gas fees on-chain)  
@@ -73,31 +55,18 @@ Status: Active, you own it
 
 ## Running Completely Standalone
 
-### Option 1: No Backend at All
-```bash
-# Remove Supabase
-rm -rf src/integrations/supabase
-rm supabase/config.toml
+GachaFi is already a fully client-side DApp with no backend required.
 
-# Remove from .env
-# VITE_SUPABASE_*
-
-# App works 100% client-side with:
-# - Radix wallet for transactions
-# - IndexedDB for offline storage
-# - No server needed
-```
-
-**What Still Works**:
+**What Works Out of the Box**:
 - ✅ Wallet connection
-- ✅ Gacha opening (demo mode)
+- ✅ Gacha opening
 - ✅ Offline queue
 - ✅ Streak tracking (local)
 - ✅ PWA features
 - ❌ User accounts (would need backend)
 - ❌ Cross-device sync (would need backend)
 
-### Option 2: Self-Hosted Everything
+### Option 1: Self-Hosted Everything
 ```bash
 # Host frontend on your own VPS
 npm run build
@@ -181,22 +150,8 @@ docker-compose up -d
 
 ## Emergency Alternatives for Every Service
 
-### If Supabase Dies Tomorrow
-
-**Option A: PostgreSQL Anywhere**
-```bash
-# Heroku Postgres
-heroku addons:create heroku-postgresql:hobby-dev
-
-# AWS RDS
-# Create RDS PostgreSQL instance
-
-# DigitalOcean Managed DB
-# Create managed PostgreSQL
-
-# Your own VPS
-docker run -d postgres:15
-```
+GachaFi does not rely on a database. If you add one in the future, see
+[DATABASE_ALTERNATIVES.md](./DATABASE_ALTERNATIVES.md) for migration options.
 
 **Option B: Switch Database Technology**
 - Firebase: 2 hours migration
@@ -241,7 +196,7 @@ npm install
 
 # 3. Configure (your own services)
 cp .env.example .env
-# Add your Supabase credentials
+# Add your Radix and contract addresses
 
 # 4. Run (completely standalone)
 npm run dev
@@ -258,7 +213,7 @@ npm run build
 | Service | Free Tier | Paid | Can Remove? |
 |---------|-----------|------|-------------|
 | Frontend Hosting | Free on Vercel/Netlify | $0-20/mo | - |
-| Supabase | 500MB free | $25/mo Pro | ✅ Yes |
+| Managed DB (optional) | 500MB free | $25/mo Pro | ✅ Yes |
 | OneSignal | 10k users free | $9+/mo | ✅ Yes |
 | Radix Blockchain | Free (gas only) | Gas fees | ⚠️ Can swap chain |
 | Domain | - | $10/year | ✅ Optional |
@@ -284,7 +239,7 @@ Your app has **ZERO Lovable dependencies**:
 
 Delete the entire Lovable project, this repo still works because:
 1. Code is in your GitHub (you own it)
-2. Supabase is your account (you own it)
+2. No third-party backend required (you own the stack)
 3. No Lovable APIs are called
 4. No Lovable services are used
 5. Standard open-source stack

@@ -1,15 +1,19 @@
-import { useGachaFi } from '@/contexts/GachaFiContext';
+import { useWalletContext } from "@/contexts/WalletContext";
 
 export const useWallet = () => {
-  const { wallet, connectWallet, updateBalance } = useGachaFi();
+  const { wallet, connectWallet, setPendingDelta, clearPendingDelta, setPendingTx } = useWalletContext();
 
   return {
     address: wallet.address,
     balance: wallet.balance,
+    pendingDelta: wallet.pendingDelta,
     isConnected: wallet.isConnected,
     isLoading: wallet.isLoading,
+    isBalanceLoading: wallet.isBalanceLoading,
     pendingTx: wallet.pendingTx,
     connectWallet,
-    updateBalance,
+    setPendingDelta,
+    clearPendingDelta,
+    setPendingTx,
   };
 };

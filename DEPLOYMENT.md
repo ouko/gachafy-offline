@@ -2,8 +2,7 @@
 
 ## Prerequisites
 1. Node.js 18+ installed
-2. Supabase project created
-3. Environment variables configured
+2. Environment variables configured
 
 ## Quick Start (5 minutes)
 
@@ -13,7 +12,7 @@ git clone <your-repo>
 cd gachafi
 npm install
 cp .env.example .env
-# Edit .env with your Supabase credentials
+# Edit .env with your credentials
 ```
 
 ### 2. Deploy to Vercel (Easiest)
@@ -37,9 +36,8 @@ docker-compose up -d
 ## Environment Variables Needed
 
 **Required:**
-- `VITE_SUPABASE_URL` - From Supabase dashboard
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - From Supabase dashboard
-- `VITE_SUPABASE_PROJECT_ID` - From Supabase URL
+- `VITE_GACHA_PACKAGE_ADDRESS` - Your deployed Scrypto package address
+- `VITE_GACHA_COMPONENT_ADDRESS` - Your deployed component address
 
 **Optional:**
 - `VITE_ONESIGNAL_APP_ID` - For push notifications
@@ -105,7 +103,7 @@ docker-compose up -d
 **Blank page:**
 - Check browser console for errors
 - Verify environment variables are correct
-- Check Supabase project is not paused
+- Verify the Scrypto contract is deployed on the chosen network
 
 **Can't connect wallet:**
 - Ensure Radix Connector extension is installed

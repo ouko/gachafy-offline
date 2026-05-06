@@ -1,7 +1,7 @@
 {
-  "name": "GachaFi POC",
+  "name": "GachaFi",
   "short_name": "GachaFi",
-  "description": "Offline-first gacha gaming experience with blockchain integration",
+  "description": "Mobile-first gacha experience on the Radix network",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0D0D0D",

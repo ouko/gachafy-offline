@@ -1,30 +1,39 @@
-import { RadixDappToolkit, RadixNetwork, DataRequestBuilder } from '@radixdlt/radix-dapp-toolkit';
+import type { RadixDappToolkit } from '@radixdlt/radix-dapp-toolkit';
 import { withRetry, withTimeout, NetworkError, TransactionError } from './errorHandling';
 import { validateInput, walletAddressSchema, balanceSchema, nonceSchema } from './validation';
 import { logger } from './logger';
 import { rateLimiter } from './rateLimiter';
+import { GACHA_DEPLOYED } from './featureFlags';
+import { RADIX_CONFIG, parseXrdAmount } from './radix-config';
 
-// Stokenet configuration
-export const STOKENET_CONFIG = {
-  networkId: RadixNetwork.Stokenet, // Use the correct enum
-  dAppDefinitionAddress: 'account_tdx_2_129vr3rwyz7gnwf35kkuxvx0fs4hkz0n5hem9utaejqra3sxf0m5wej',
-  rpcUrl: 'https://stokenet.radixdlt.com',
-  gatewayUrl: 'https://babylon-stokenet-gateway.radixdlt.com'
+/** Cryptographically-random uint64-safe nonce. Falls back to Math.random
+ *  only if crypto.getRandomValues is unavailable (very old browsers). */
+const generateNonce = (): number => {
+  try {
+    const buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    // Combine to a value within Number.MAX_SAFE_INTEGER (2^53 - 1).
+    // Use top 21 bits of the high word + 32 bits of the low word.
+    const hi = buf[0] >>> 11; // 21 bits
+    const lo = buf[1]; // 32 bits
+    return hi * 0x100000000 + lo;
+  } catch {
+    // Last-ditch fallback. Not secure; logged loudly.
+    logger.warn('crypto.getRandomValues unavailable, falling back to Math.random', null, 'RadixService');
+    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+  }
 };
 
-// XRD resource address on Stokenet
-export const XRD_RESOURCE_ADDRESS = 'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc';
-
-// Gacha package and component addresses (these would need to be deployed)
-export const GACHA_PACKAGE_ADDRESS = 'package_tdx_2_1p4r8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p';
-export const GACHA_COMPONENT_ADDRESS = 'component_tdx_2_1cp4r8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p8p';
+// ----------------------------------------------------------------------------
+// Service
+// ----------------------------------------------------------------------------
 
 class RadixService {
   private rdt: RadixDappToolkit | null = null;
   private initialized = false;
-  private walletDataListeners = new Set<(data: any) => void>();
+  private walletDataListeners = new Set<(data: unknown) => void>();
 
-  onWalletData(listener: (data: any) => void) {
+  onWalletData(listener: (data: unknown) => void) {
     this.walletDataListeners.add(listener);
     return () => this.walletDataListeners.delete(listener);
   }
@@ -32,36 +41,53 @@ class RadixService {
   async initialize() {
     if (this.initialized) return;
 
-    try {
-      logger.info('Initializing Radix DApp Toolkit with mobile support', null, 'RadixService');
-      
-      this.rdt = RadixDappToolkit({
-        dAppDefinitionAddress: STOKENET_CONFIG.dAppDefinitionAddress,
-        networkId: STOKENET_CONFIG.networkId,
-        applicationName: 'GachaFi',
-        applicationVersion: '1.0.0',
-      });
+    if (!RADIX_CONFIG.dAppDefinitionAddress) {
+      logger.error(
+        'VITE_RADIX_DAPP_DEFINITION is empty for the configured network. The wallet button will not work.',
+        { network: RADIX_CONFIG.network },
+        'RadixService',
+      );
+      throw new NetworkError('Radix dApp definition address is not configured');
+    }
 
-      // Configure button appearance and request data
-      try {
-        this.rdt.buttonApi.setMode('dark');
-      } catch {}
-      
-      // Request at least one account by default so the √ Connect button knows what to ask for
-      await this.rdt.walletApi.setRequestData(
-        DataRequestBuilder.accounts().atLeast(1)
+    try {
+      logger.info(
+        'Initializing Radix DApp Toolkit',
+        { network: RADIX_CONFIG.network, gateway: RADIX_CONFIG.gatewayUrl },
+        'RadixService',
       );
 
-      // Subscribe to wallet connection state changes
+      const { RadixDappToolkit, DataRequestBuilder } = await import('@radixdlt/radix-dapp-toolkit');
+
+      this.rdt = RadixDappToolkit({
+        dAppDefinitionAddress: RADIX_CONFIG.dAppDefinitionAddress,
+        networkId: RADIX_CONFIG.networkId,
+        applicationName: RADIX_CONFIG.appName,
+        applicationVersion: RADIX_CONFIG.appVersion,
+      });
+
+      try {
+        this.rdt.buttonApi.setMode('dark');
+      } catch {
+        // setMode is best-effort — older toolkit versions throw.
+      }
+
+      // Default request: at least one account.
+      await this.rdt.walletApi.setRequestData(DataRequestBuilder.accounts().atLeast(1));
+
+      // Subscribe and fan out to listeners (Context, etc.).
       this.rdt.walletApi.walletData$.subscribe((walletData) => {
-        logger.info('Wallet data updated', { walletData }, 'RadixService');
-        // Notify listeners (e.g., React context)
+        logger.debug('Wallet data updated', { walletData }, 'RadixService');
         this.walletDataListeners.forEach((cb) => {
-          try { cb(walletData); } catch {}
+          try {
+            cb(walletData);
+          } catch (e) {
+            logger.warn('Wallet data listener threw', e, 'RadixService');
+          }
         });
       });
 
-      logger.info('Radix DApp Toolkit initialized successfully with mobile deep linking', null, 'RadixService');
+      logger.info('Radix DApp Toolkit ready', null, 'RadixService');
       this.initialized = true;
     } catch (error) {
       logger.error('Failed to initialize Radix DApp Toolkit', error, 'RadixService');
@@ -69,10 +95,9 @@ class RadixService {
     }
   }
 
-  async connectWallet(): Promise<any> {
+  async connectWallet(): Promise<{ accounts: { address: string }[] } | null> {
     if (!this.rdt) await this.initialize();
-    
-    // Rate limit check
+
     if (!rateLimiter.check('wallet_connect', { maxRequests: 3, windowMs: 60000, keyPrefix: 'radix' })) {
       logger.warn('Wallet connection rate limited', null, 'RadixService');
       return null;
@@ -80,14 +105,10 @@ class RadixService {
 
     try {
       logger.info('Attempting wallet connection', null, 'RadixService');
-      
-      // Prepare request and trigger wallet
-      await this.rdt!.walletApi.setRequestData(
-        DataRequestBuilder.accounts().atLeast(1)
-      );
+      const { DataRequestBuilder } = await import('@radixdlt/radix-dapp-toolkit');
+      await this.rdt!.walletApi.setRequestData(DataRequestBuilder.accounts().atLeast(1));
       const result = await this.rdt!.walletApi.sendRequest();
-
-      logger.info('Wallet connection successful', null, 'RadixService');
+      logger.info('Wallet connection succeeded', null, 'RadixService');
       return result;
     } catch (error) {
       logger.error('Wallet connection failed', error, 'RadixService');
@@ -96,27 +117,22 @@ class RadixService {
   }
 
   async getBalance(accountAddress: string): Promise<number> {
-    // Validate input
     validateInput(walletAddressSchema, accountAddress, 'Invalid wallet address');
-    
+
     return await withRetry(
       async () => {
         const response = await withTimeout(
-          fetch(`${STOKENET_CONFIG.gatewayUrl}/state/entity/details`, {
+          fetch(`${RADIX_CONFIG.gatewayUrl}/state/entity/details`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               addresses: [accountAddress],
               aggregation_level: 'Vault',
-              opt_ins: {
-                fungible_resource_balances: true,
-              },
+              opt_ins: { fungible_resource_balances: true },
             }),
           }),
           10000,
-          'Balance fetch timed out'
+          'Balance fetch timed out',
         );
 
         if (!response.ok) {
@@ -124,19 +140,22 @@ class RadixService {
         }
 
         const data = await response.json();
-        const fungibleResources = data.items[0]?.fungible_resources?.items || [];
-        
+        const fungibleResources = data?.items?.[0]?.fungible_resources?.items ?? [];
+
         const xrdBalance = fungibleResources.find(
-          (resource: any) => resource.resource_address === XRD_RESOURCE_ADDRESS
+          (resource: { resource_address: string; amount?: string }) =>
+            resource.resource_address === RADIX_CONFIG.xrdResourceAddress,
         );
 
-        const balance = xrdBalance ? parseFloat(xrdBalance.amount) / Math.pow(10, 18) : 0;
-        
-        // Validate balance
+        // Gateway returns amounts as human-readable decimal strings (e.g. "10.5").
+        const balance = parseXrdAmount(xrdBalance?.amount ?? '0');
+
+        // Validate but don't cap — old schema rejected huge balances. Use a
+        // generous ceiling that's still a sanity check (10 trillion XRD).
         return validateInput(balanceSchema, balance, 'Invalid balance received');
       },
-      { maxAttempts: 3, delayMs: 1000 }
-    ).catch(error => {
+      { maxAttempts: 3, delayMs: 1000 },
+    ).catch((error) => {
       logger.error('Error fetching balance', error, 'RadixService');
       return 0;
     });
@@ -145,41 +164,51 @@ class RadixService {
   async mintGachaBadge(accountAddress: string, tier: string, amount: number): Promise<string> {
     if (!this.rdt) await this.initialize();
 
-    // Validate inputs
     validateInput(walletAddressSchema, accountAddress, 'Invalid wallet address');
     validateInput(balanceSchema, amount, 'Invalid amount');
-    
+
     if (!['common', 'rare', 'epic'].includes(tier)) {
       throw new TransactionError('Invalid tier');
     }
 
-    // Rate limit minting
+    if (!GACHA_DEPLOYED) {
+      throw new TransactionError(
+        'Gacha component is not yet deployed. Set VITE_GACHA_PACKAGE_ADDRESS and VITE_GACHA_COMPONENT_ADDRESS.',
+      );
+    }
+
     if (!rateLimiter.check(`mint_${accountAddress}`, { maxRequests: 5, windowMs: 60000, keyPrefix: 'mint' })) {
       throw new TransactionError('Too many mint requests. Please wait before trying again.');
     }
 
-    // Generate a simple nonce for VDF (in real implementation, this would be more complex)
-    const nonce = validateInput(nonceSchema, Math.floor(Math.random() * 1000000));
-    
-    // Create the transaction manifest
+    const nonce = validateInput(nonceSchema, generateNonce());
+
+    // Defensive sanitization: Radix addresses should only contain alphanumeric
+    // and underscore characters. Anything else could break manifest syntax.
+    const safeAddress = accountAddress.replace(/[^a-zA-Z0-9_]/g, '');
+    if (safeAddress !== accountAddress) {
+      throw new TransactionError('Wallet address contains invalid characters');
+    }
+
     const manifest = `
       CALL_METHOD
         Address("${accountAddress}")
         "withdraw"
-        Address("${XRD_RESOURCE_ADDRESS}")
+        Address("${RADIX_CONFIG.xrdResourceAddress}")
         Decimal("${amount}");
 
       TAKE_FROM_WORKTOP
-        Address("${XRD_RESOURCE_ADDRESS}")
+        Address("${RADIX_CONFIG.xrdResourceAddress}")
         Decimal("${amount}")
         Bucket("xrd_bucket");
 
       CALL_METHOD
-        Address("${GACHA_COMPONENT_ADDRESS}")
+        Address("${RADIX_CONFIG.gachaComponentAddress}")
         "mint_gacha_badge"
         Bucket("xrd_bucket")
         "${tier}"
-        ${nonce}u64;
+        ${nonce}u64
+        "${safeAddress}";
 
       CALL_METHOD
         Address("${accountAddress}")
@@ -189,18 +218,20 @@ class RadixService {
 
     try {
       logger.info('Submitting mint transaction', { tier, amount }, 'RadixService');
-      
       const result = await this.rdt!.walletApi.sendTransaction({
         transactionManifest: manifest,
         version: 1,
       });
 
-      const txHash = (result as any)?.value?.transactionIntentHash || 'mock_tx_' + Date.now();
+      const txHash = (result as { value?: { transactionIntentHash?: string } })?.value?.transactionIntentHash;
+      if (!txHash || typeof txHash !== 'string') {
+        throw new TransactionError('Wallet returned no transaction hash');
+      }
       logger.info('Transaction submitted', { txHash }, 'RadixService');
-      
       return txHash;
     } catch (error) {
       logger.error('Transaction submission failed', error, 'RadixService');
+      if (error instanceof TransactionError) throw error;
       throw new TransactionError('Failed to submit transaction');
     }
   }
@@ -209,17 +240,13 @@ class RadixService {
     return await withRetry(
       async () => {
         const response = await withTimeout(
-          fetch(`${STOKENET_CONFIG.gatewayUrl}/transaction/status`, {
+          fetch(`${RADIX_CONFIG.gatewayUrl}/transaction/status`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              intent_hash: txHash,
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ intent_hash: txHash }),
           }),
           10000,
-          'Transaction status check timed out'
+          'Transaction status check timed out',
         );
 
         if (!response.ok) {
@@ -227,85 +254,59 @@ class RadixService {
         }
 
         const data = await response.json();
-        
         if (data.status === 'CommittedSuccess') return 'success';
         if (data.status === 'CommittedFailure') return 'failed';
         return 'pending';
       },
-      { maxAttempts: 2, delayMs: 500 }
-    ).catch(error => {
+      { maxAttempts: 2, delayMs: 500 },
+    ).catch((error) => {
       logger.warn('Error checking transaction status', error, 'RadixService');
       return 'pending' as const;
     });
   }
 
-  // Creator earnings methods
-  async getUserCapsules(walletAddress: string): Promise<any[]> {
+  /**
+   * Query an account's NFT holdings to surface created Capsules.
+   * Returns the raw gateway items; callers filter for the Capsule resource.
+   *
+   * On-chain aggregation of earnings is not implemented yet — see the
+   * Creator dashboard for honest zeros.
+   */
+  async getUserCapsules(walletAddress: string): Promise<unknown[]> {
+    validateInput(walletAddressSchema, walletAddress, 'Invalid wallet address');
+
     try {
-      console.log('Fetching user capsules for:', walletAddress);
-      
-      // Query user's NFT holdings to find created Capsules
-      const response = await fetch(`${STOKENET_CONFIG.gatewayUrl}/state/entity/details`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          addresses: [walletAddress],
-          aggregation_level: 'Vault',
-          opt_ins: {
-            ancestor_identities: false,
-            component_royalty_vault_balance: false,
-            package_royalty_vault_balance: false,
-            non_fungible_include_nfids: true,
-            explicit_metadata: []
-          }
-        })
-      });
+      const response = await withTimeout(
+        fetch(`${RADIX_CONFIG.gatewayUrl}/state/entity/details`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            addresses: [walletAddress],
+            aggregation_level: 'Vault',
+            opt_ins: {
+              ancestor_identities: false,
+              component_royalty_vault_balance: false,
+              package_royalty_vault_balance: false,
+              non_fungible_include_nfids: true,
+              explicit_metadata: [],
+            },
+          }),
+        }),
+        10000,
+        'getUserCapsules timed out',
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch user capsules: ${response.statusText}`);
+        throw new NetworkError(`Failed to fetch user capsules: ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('User capsules data:', data);
-      
-      // Filter for Capsule NFTs (would need specific resource address)
-      return data.items || [];
+      return data.items ?? [];
     } catch (error) {
-      console.error('Error fetching user capsules:', error);
+      logger.error('Error fetching user capsules', error, 'RadixService');
       return [];
-    }
-  }
-
-  async getCapsuleEarnings(capsuleId: string): Promise<{ today: number; allTime: number; totalOpens: number }> {
-    try {
-      console.log('Calculating earnings for capsule:', capsuleId);
-      
-      // Query transaction history for this Capsule
-      // Calculate 0.5% of SP from opens
-      // This would involve complex RPC queries to:
-      // 1. Find all transactions involving this Capsule
-      // 2. Parse transaction manifests for SP amounts
-      // 3. Calculate creator share (0.5%)
-      // 4. Aggregate by time periods
-      
-      // For demo, return simulated data
-      return {
-        today: Math.random() * 10,
-        allTime: Math.random() * 1000,
-        totalOpens: Math.floor(Math.random() * 2000),
-      };
-    } catch (error) {
-      console.error('Error calculating capsule earnings:', error);
-      return { today: 0, allTime: 0, totalOpens: 0 };
     }
   }
 }
 
 export const radixService = new RadixService();
-
-// Helper function to shorten transaction hash for display
-export const shortenTxHash = (hash: string): string => {
-  return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
-};

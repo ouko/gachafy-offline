@@ -6,6 +6,20 @@ interface RateLimitConfig {
   keyPrefix?: string;
 }
 
+/**
+ * ⚠️ SECURITY WARNING: This is a CLIENT-SIDE rate limiter.
+ *
+ * It provides UX friction (prevents accidental rapid clicks) but ZERO
+ * real security. A determined attacker can:
+ * - Open unlimited incognito tabs
+ * - Clear localStorage / sessionStorage
+ * - Modify the bundled JavaScript
+ * - Bypass entirely with curl/scripts
+ *
+ * For actual abuse prevention, implement server-side rate limiting
+ * (e.g., Supabase Edge Functions, Cloudflare Workers, API Gateway).
+ * This class should be treated as "UX debouncing," not security.
+ */
 class RateLimiter {
   private requests: Map<string, number[]> = new Map();
 
@@ -75,7 +89,7 @@ class RateLimiter {
 export const rateLimiter = new RateLimiter();
 
 // Debounce utility
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   waitMs: number
 ): (...args: Parameters<T>) => void {
@@ -94,7 +108,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle utility
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limitMs: number
 ): (...args: Parameters<T>) => void {

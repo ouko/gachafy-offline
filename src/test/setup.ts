@@ -1,0 +1,32 @@
+import "@testing-library/jest-dom";
+import "fake-indexeddb/auto";
+
+// Mock import.meta.env for Vite environment variables
+Object.defineProperty(globalThis, "import", {
+  value: {
+    meta: {
+      env: {
+        VITE_RADIX_NETWORK: "stokenet",
+        VITE_RADIX_DAPP_DEFINITION: "account_tdx_2_129vr3rwyz7gnwf35kkuxvx0fs4hkz0n5hem9utaejqra3sxf0m5wej",
+        VITE_XRD_RESOURCE_ADDRESS: "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc",
+        VITE_GACHA_PACKAGE_ADDRESS: "package_tdx_2_1phrqqfg3245qqq2pqgpaua5qqqjgqqqqqqqqqqqqqqqqqqqqqqqq",
+        VITE_GACHA_COMPONENT_ADDRESS: "component_tdx_2_1cxxxxxxxxxxgachaxxxxxxxxxx006838150368xxxxxxxxxcs2j46",
+        DEV: true,
+        PROD: false,
+      },
+    },
+  },
+  writable: true,
+});
+
+// Mock crypto.getRandomValues for tests
+Object.defineProperty(globalThis, "crypto", {
+  value: {
+    getRandomValues: (arr: Uint32Array) => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 0xffffffff);
+      }
+      return arr;
+    },
+  },
+});

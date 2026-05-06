@@ -1,13 +1,13 @@
-import { useGachaFi } from '@/contexts/GachaFiContext';
+import { useOfflineContext } from "@/contexts/OfflineContext";
 
 export const useOffline = () => {
-  const { offlineQueue } = useGachaFi();
+  const { isOnline, queuedRequests, queueMintRequest, processOfflineQueue, clearQueue } = useOfflineContext();
 
   return {
-    isOnline: offlineQueue.isOnline,
-    queuedRequests: offlineQueue.queuedRequests,
-    queueMintRequest: offlineQueue.queueMintRequest,
-    processOfflineQueue: offlineQueue.processOfflineQueue,
-    clearQueue: offlineQueue.clearQueue,
+    isOnline,
+    queuedRequests,
+    queueMintRequest,
+    processOfflineQueue,
+    clearQueue,
   };
 };

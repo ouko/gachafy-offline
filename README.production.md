@@ -1,19 +1,18 @@
 # GachaFi - Production Deployment Guide
 
 ## Overview
-GachaFi is a production-ready Web3 gacha gaming application with offline-first capabilities, built with React, Vite, Radix DLT, and Supabase.
+GachaFi is a production-ready Web3 gacha gaming application with offline-first capabilities, built with React, Vite, and Radix DLT.
 
 ## Tech Stack
 - **Frontend**: React 18 + TypeScript + Vite
 - **Blockchain**: Radix DLT (Stokenet/Mainnet)
-- **Backend**: Supabase (PostgreSQL + Edge Functions)
+- **Backend**: None (client-side DApp — all state on Radix DLT or local device)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **State Management**: React Context + TanStack Query
 - **PWA**: Service Workers + IndexedDB
 
 ## Prerequisites
 - Node.js 18+ or Bun
-- Supabase account
 - Radix wallet (for testing)
 - (Optional) OneSignal account for push notifications
 
@@ -32,15 +31,9 @@ cp .env.example .env
 ```
 
 Edit `.env` with your actual credentials:
-- **Supabase**: Get from https://supabase.com/dashboard/project/_/settings/api
 - **OneSignal** (optional): Get from https://onesignal.com/
 
-### 3. Supabase Setup
-Your Supabase project is already configured with the project ID: `ibicvmavajmuoygedeyw`
-
-**Important**: Ensure your Supabase RLS policies are properly configured for production use.
-
-### 4. Run Development Server
+### 3. Run Development Server
 ```bash
 npm run dev  # or: bun run dev
 ```
@@ -93,8 +86,8 @@ docker build -t gachafi:latest .
 
 # Run container
 docker run -p 3000:80 \
-  -e VITE_SUPABASE_URL=your-url \
-  -e VITE_SUPABASE_PUBLISHABLE_KEY=your-key \
+  -e VITE_GACHA_PACKAGE_ADDRESS=your-package \
+  -e VITE_GACHA_COMPONENT_ADDRESS=your-component \
   gachafi:latest
 ```
 
@@ -109,36 +102,17 @@ npm run build
 ## Environment Variables
 
 ### Required
-- `VITE_SUPABASE_URL`: Your Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY`: Your Supabase anon key
-- `VITE_SUPABASE_PROJECT_ID`: Your Supabase project ID
+- `VITE_GACHA_PACKAGE_ADDRESS`: Your deployed Scrypto package address
+- `VITE_GACHA_COMPONENT_ADDRESS`: Your deployed component address
 
 ### Optional
 - `VITE_ONESIGNAL_APP_ID`: OneSignal app ID for push notifications
 - `VITE_RADIX_NETWORK`: `stokenet` (testnet) or `mainnet`
 - `VITE_RADIX_DAPP_DEFINITION`: Your dApp definition address
 
-## Supabase Edge Functions
-
-Edge functions are located in `supabase/functions/`. They deploy automatically with Supabase CLI.
-
-**Local Testing**:
-```bash
-supabase functions serve
-```
-
-**Production Deployment**:
-```bash
-supabase functions deploy
-```
-
 ## Security Checklist
 
-- [ ] Enable RLS on all Supabase tables
-- [ ] Review and test all RLS policies
-- [ ] Set up proper CORS headers for production domain
 - [ ] Configure CSP headers
-- [ ] Enable rate limiting on Supabase
 - [ ] Review and rotate API keys regularly
 - [ ] Set up monitoring and error tracking (Sentry recommended)
 - [ ] Enable HTTPS only
@@ -177,19 +151,6 @@ The app includes a production-safe logging system (`src/lib/logger.ts`) that:
 - Only logs errors/warnings in production
 - Buffers recent logs for debugging
 
-## Database Migrations
-
-Supabase migrations are in `supabase/migrations/`. 
-
-**To apply migrations**:
-```bash
-# Local
-supabase db push
-
-# Production (via Supabase dashboard or CLI)
-supabase db push --linked
-```
-
 ## Troubleshooting
 
 ### Build Issues
@@ -199,12 +160,6 @@ rm -rf node_modules dist .vite
 npm install
 npm run build
 ```
-
-### Supabase Connection Issues
-- Verify environment variables are set correctly
-- Check Supabase project is not paused
-- Verify RLS policies allow your operations
-- Check network/CORS settings
 
 ### Wallet Connection Issues
 - Ensure Radix Connector browser extension is installed
@@ -250,13 +205,10 @@ jobs:
 
 ### Current Capacity
 - Frontend: Scales infinitely (static hosting)
-- Supabase Free Tier: 500MB database, 2GB bandwidth/month
-- Supabase Pro: Unlimited with usage-based pricing
+- Radix Gateway: Public endpoint (consider self-hosted gateway for high traffic)
 
 ### When to Scale
-- **Database**: Upgrade Supabase tier when approaching 500MB
-- **Edge Functions**: Monitor execution time and memory
-- **Real-time**: Supabase supports millions of concurrent connections
+- **Gateway**: Self-host a Radix Gateway or use a provider with SLAs if public gateway rate limits become an issue
 
 ### Rate Limits (Built-in)
 - Wallet connections: 3/minute
@@ -267,11 +219,11 @@ jobs:
 
 ### Regular Tasks
 - [ ] Monitor error logs weekly
-- [ ] Review Supabase usage monthly
+- [ ] Review gateway usage and error rates monthly
 - [ ] Update dependencies monthly (`npm outdated`)
 - [ ] Security audit quarterly
 - [ ] Performance audit quarterly
-- [ ] Backup database weekly (automatic with Supabase)
+- [ ] Verify contract addresses are correct after any redeployment
 
 ### Updating Dependencies
 ```bash

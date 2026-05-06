@@ -67,7 +67,7 @@ cd gachafi
 
 # Configure for production
 cp .env.example .env.production
-# Edit .env.production (can leave Supabase empty for pure static)
+# Edit .env.production with your Radix and gacha contract addresses
 
 # Build
 npm install
@@ -94,7 +94,7 @@ server {
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-XSS-Protection "0" always;
 
     # Gzip compression
     gzip on;
@@ -276,7 +276,7 @@ ufw enable
 | **Pure Static Self-Hosted** | $5 | 30 min | 1 hr/month |
 | **Vercel/Netlify** | $0-20 | 5 min | None |
 | **Self-Hosted + DB** | $10 | 2 hours | 2 hrs/month |
-| **Supabase** | $0-25 | 10 min | None |
+| **Managed DB** (if added later) | $0-25 | 10 min | None |
 | **Full Self-Hosted Stack** | $15-30 | 4 hours | 3 hrs/month |
 
 ## Performance Tuning

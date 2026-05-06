@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { GachaFiProvider } from "@/contexts/GachaFiContext";
+import { WalletProvider } from "@/contexts/WalletContext";
+import { GameProvider } from "@/contexts/GameContext";
+import { OfflineProvider } from "@/contexts/OfflineContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Open from "./pages/Open";
@@ -28,22 +30,26 @@ const queryClient = new QueryClient({
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <GachaFiProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/open" element={<ErrorBoundary><Open /></ErrorBoundary>} />
-              <Route path="/reveal" element={<ErrorBoundary><Reveal /></ErrorBoundary>} />
-              <Route path="/creator" element={<ErrorBoundary><Creator /></ErrorBoundary>} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </GachaFiProvider>
+      <WalletProvider>
+        <GameProvider>
+          <OfflineProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/open" element={<ErrorBoundary><Open /></ErrorBoundary>} />
+                  <Route path="/reveal" element={<ErrorBoundary><Reveal /></ErrorBoundary>} />
+                  <Route path="/creator" element={<ErrorBoundary><Creator /></ErrorBoundary>} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </OfflineProvider>
+        </GameProvider>
+      </WalletProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

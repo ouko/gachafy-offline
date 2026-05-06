@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { logger } from './logger';
 
 export class AppError extends Error {
   constructor(
@@ -42,14 +43,14 @@ interface RetryConfig {
   maxAttempts?: number;
   delayMs?: number;
   backoffMultiplier?: number;
-  shouldRetry?: (error: any, attempt: number) => boolean;
+  shouldRetry?: (error: unknown, attempt: number) => boolean;
 }
 
 const defaultRetryConfig: Required<RetryConfig> = {
   maxAttempts: 3,
   delayMs: 1000,
   backoffMultiplier: 2,
-  shouldRetry: (error: any, attempt: number) => {
+  shouldRetry: (error: unknown, attempt: number) => {
     // Don't retry validation errors or client errors (4xx)
     if (error instanceof ValidationError) return false;
     if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) return false;
@@ -63,7 +64,7 @@ export async function withRetry<T>(
   config: RetryConfig = {}
 ): Promise<T> {
   const cfg = { ...defaultRetryConfig, ...config };
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= cfg.maxAttempts; attempt++) {
     try {
@@ -109,7 +110,7 @@ export async function safeAsync<T>(
   fn: () => Promise<T>,
   options: {
     fallback?: T;
-    onError?: (error: any) => void;
+    onError?: (error: unknown) => void;
     errorMessage?: string;
   } = {}
 ): Promise<T | undefined> {
@@ -133,18 +134,9 @@ export async function safeAsync<T>(
 }
 
 // Global error handler
-export const handleError = (error: any, context?: string) => {
-  // Log error (in production, send to monitoring service)
-  if (process.env.NODE_ENV === 'production') {
-    // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-    console.error(`Error${context ? ` in ${context}` : ''}:`, {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-    });
-  } else {
-    console.error(`Error${context ? ` in ${context}` : ''}:`, error);
-  }
+export const handleError = (error: unknown, context?: string) => {
+  const label = context || 'global';
+  logger.error(`Error in ${label}`, error, 'ErrorHandling');
 
   // Show user-friendly message
   if (error instanceof AppError) {

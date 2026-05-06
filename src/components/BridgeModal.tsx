@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { ArrowUpDown, ArrowRight, CheckCircle, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { FEATURE_BRIDGE_LIVE } from '@/lib/featureFlags';
+
+// NOTE: This component is currently a UI placeholder. The bridge flow is
+// not implemented — it does not move funds, sign transactions, or talk to
+// any cross-chain protocol. It is rendered only when VITE_FEATURE_BRIDGE
+// is enabled (off by default). Replace `startBridge` with a real
+// implementation before turning the flag on in production.
 
 interface BridgeModalProps {
   isOpen: boolean;
@@ -34,6 +41,12 @@ export const BridgeModal = ({ isOpen, onClose, onSuccess }: BridgeModalProps) =>
     errorMessage: '',
     hyperlaneProgress: 0,
   });
+
+  // Keep a stable ref to the current amount so callbacks don't close over stale state
+  const amountRef = useRef(bridgeState.amount);
+  useEffect(() => {
+    amountRef.current = bridgeState.amount;
+  }, [bridgeState.amount]);
 
   // Demo exchange rates
   const USDC_TO_ZUSDC_RATE = 1; // 1:1
@@ -95,7 +108,7 @@ export const BridgeModal = ({ isOpen, onClose, onSuccess }: BridgeModalProps) =>
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Step 5: Success
-        const finalXrdAmount = (bridgeState.amount - BRIDGE_FEE) * ZUSDC_TO_XRD_RATE;
+        const finalXrdAmount = (amountRef.current - BRIDGE_FEE) * ZUSDC_TO_XRD_RATE;
         setBridgeState(prev => ({ ...prev, step: 'success' }));
         
         // Notify parent of success
@@ -229,12 +242,12 @@ export const BridgeModal = ({ isOpen, onClose, onSuccess }: BridgeModalProps) =>
                 <Button variant="outline" onClick={handleClose} className="flex-1">
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={startBridge}
-                  disabled={bridgeState.amount <= BRIDGE_FEE}
+                  disabled={bridgeState.amount <= BRIDGE_FEE || !FEATURE_BRIDGE_LIVE}
                   className="flex-1"
                 >
-                  Start Bridge
+                  {FEATURE_BRIDGE_LIVE ? 'Start Bridge' : 'Bridge Not Live'}
                 </Button>
               </div>
             </div>
@@ -341,6 +354,23 @@ export const BridgeModal = ({ isOpen, onClose, onSuccess }: BridgeModalProps) =>
           )}
 
           {/* Info */}
+          {!FEATURE_BRIDGE_LIVE && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-900 rounded-lg text-sm">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-300">
+                    Bridge execution disabled
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400">
+                    This bridge UI is a placeholder. Real cross-chain integration is
+                    not yet wired. Set VITE_FEATURE_BRIDGE_LIVE to enable execution.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg text-sm">
             <div className="flex items-start gap-2">
               <ArrowUpDown className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -349,7 +379,7 @@ export const BridgeModal = ({ isOpen, onClose, onSuccess }: BridgeModalProps) =>
                   Powered by Hyperlane
                 </p>
                 <p className="text-blue-600 dark:text-blue-400">
-                  Secure cross-chain messaging protocol enabling seamless asset transfers 
+                  Secure cross-chain messaging protocol enabling seamless asset transfers
                   between Ethereum and Radix networks.
                 </p>
               </div>

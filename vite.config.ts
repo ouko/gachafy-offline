@@ -20,14 +20,17 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
+    sourcemap: true,
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-slot', '@radix-ui/react-dialog', '@radix-ui/react-toast'],
-          'radix-dlt': ['@radixdlt/radix-dapp-toolkit'],
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) {
+            if (/react|react-dom|react-router-dom/.test(id)) return 'react-vendor';
+            if (/radix-ui/.test(id)) return 'ui-vendor';
+            if (/radixdlt/.test(id)) return 'radix-dlt';
+            return 'vendor';
+          }
         },
       },
     },

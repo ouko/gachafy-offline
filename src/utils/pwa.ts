@@ -1,51 +1,57 @@
+import { logger } from '@/lib/logger';
+
 // PWA Service Worker Registration
 export const registerSW = () => {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          logger.info('Service worker registered', { scope: registration.scope }, 'PWA');
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          logger.error('Service worker registration failed', registrationError, 'PWA');
         });
     });
   }
 };
 
-// Install prompt for PWA
-export const setupPWAInstall = () => {
-  let deferredPrompt: any;
+// ---------------------------------------------------------------------------
+// Install prompt — module-level singleton so multiple components can share
+// the same deferred prompt without registering duplicate listeners.
+// ---------------------------------------------------------------------------
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
-    e.preventDefault();
-    // Stash the event so it can be triggered later
-    deferredPrompt = e;
-    
-    // Show install button or notification
-    console.log('PWA install prompt available');
-  });
+let deferredPrompt: Event | undefined;
+let listenerInstalled = false;
+
+export const setupPWAInstall = () => {
+  if (!listenerInstalled && 'BeforeInstallPromptEvent' in window) {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      logger.info('PWA install prompt available', null, 'PWA');
+    });
+    listenerInstalled = true;
+  }
 
   return {
     showInstallPrompt: async () => {
       if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        deferredPrompt = null;
+        (deferredPrompt as Event & { prompt: () => void }).prompt();
+        const { outcome } = await (deferredPrompt as Event & { userChoice: Promise<{ outcome: string }> }).userChoice;
+        logger.info(`User response to the install prompt: ${outcome}`, null, 'PWA');
+        deferredPrompt = undefined;
       }
-    }
+    },
+    isPromptAvailable: () => !!deferredPrompt,
   };
 };
 
-// Detect if running as an installed PWA (standalone/app window)
+// Detect if running as an installed PWA (standalone/app window).
+// iOS Safari exposes `navigator.standalone`; everywhere else we use the
+// display-mode media query.
 export const isStandalone = (): boolean => {
-  // iOS Safari uses navigator.standalone, others support display-mode media query
-  // @ts-ignore - standalone is not in the TS lib
-  return (
-    (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches) ||
-    // @ts-ignore
-    (typeof window !== 'undefined' && (navigator as any)?.standalone === true)
-  );
+  if (typeof window === 'undefined') return false;
+  if (window.matchMedia?.('(display-mode: standalone)').matches) return true;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return nav.standalone === true;
 };

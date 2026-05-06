@@ -55,7 +55,7 @@ See **[README.production.md](./README.production.md)** for comprehensive product
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Blockchain**: Radix DLT (Stokenet/Mainnet)
-- **Backend**: Supabase (PostgreSQL + Edge Functions)
+- **Backend**: None (client-side DApp — all state on Radix DLT or local device)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **State**: React Context + TanStack Query
 - **PWA**: Service Workers + IndexedDB
@@ -63,7 +63,6 @@ See **[README.production.md](./README.production.md)** for comprehensive product
 ## 📋 Prerequisites
 
 - Node.js 18+ (or Bun)
-- Supabase account (free tier works)
 - Radix wallet for testing
 - (Optional) OneSignal for push notifications
 
@@ -73,9 +72,8 @@ Create `.env` from `.env.example`:
 
 ```bash
 # Required
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-VITE_SUPABASE_PROJECT_ID=your-project-id
+VITE_GACHA_PACKAGE_ADDRESS=your-package-address
+VITE_GACHA_COMPONENT_ADDRESS=your-component-address
 
 # Optional
 VITE_ONESIGNAL_APP_ID=your-onesignal-id
@@ -102,7 +100,6 @@ gachafi/
 │   ├── utils/           # Utility functions
 │   └── integrations/    # Third-party integrations
 ├── public/              # Static assets
-├── supabase/           # Supabase config & functions
 ├── .env.example        # Environment template
 ├── Dockerfile          # Docker configuration
 ├── docker-compose.yml  # Docker Compose setup
@@ -146,7 +143,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for platform-specific instructions.
 - ✅ Sanitized logging (no sensitive data in logs)
 - ✅ Security headers (CSP, XSS protection)
 - ✅ HTTPS-only in production
-- ✅ Supabase RLS ready
+- ✅ Smart contract access control
 
 ## 📊 Performance
 
@@ -218,7 +215,7 @@ See **[LOVABLE_INDEPENDENCE_CHECKLIST.md](./LOVABLE_INDEPENDENCE_CHECKLIST.md)**
 
 ### What You Own
 ✅ All source code (in your GitHub)  
-✅ All data (your Supabase account)  
+✅ All data (your device / the Radix blockchain)  
 ✅ All deployments (your hosting)  
 ✅ All functionality (no lock-in)  
 
@@ -236,7 +233,7 @@ This codebase has **ZERO production dependencies on Lovable**:
 ✅ **Pure Open Source** - Standard React + Vite + TypeScript  
 ✅ **Standard Dependencies** - All from public npm registry  
 ✅ **Deploy Anywhere** - Vercel, Netlify, AWS, Docker, VPS, GitHub Pages  
-✅ **Own Your Services** - Supabase (optional), OneSignal (optional)  
+✅ **Own Your Services** - OneSignal (optional), Radix DLT (decentralized)  
 ✅ **Replace Anything** - Every service has documented alternatives  
 ✅ **No Runtime Lock-in** - Production builds have zero Lovable code  
 

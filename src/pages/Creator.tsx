@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp, Coins, DollarSign, Zap, RefreshCw } from 'lucide-react';
+import { TrendingUp, Coins, DollarSign, Zap, RefreshCw, Info, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { FEATURE_CREATOR_DASHBOARD } from '@/lib/featureFlags';
 
 interface CapsuleData {
   id: string;
@@ -20,64 +22,48 @@ interface EarningsData {
   totalSpToday: number;
   totalSpAllTime: number;
   usdEquivalent: number;
-  xrdPrice: number;
+  xrdPrice: number | null; // null when no price feed is configured
   capsules: CapsuleData[];
 }
 
 const Creator = () => {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, connectWallet } = useWallet();
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // Demo XRD price (in production, this would come from a price API)
-  const DEMO_XRD_PRICE = 0.045; // $0.045 per XRD
-
-  const fetchCreatorData = async () => {
+  const fetchCreatorData = useCallback(async () => {
     if (!isConnected || !address) return;
-    
     setIsLoading(true);
-    
     try {
-      // Production mode: Read from Radix RPC
-      console.log('Fetching creator data from Radix network for:', address);
-      
-      // TODO: Implement actual on-chain reading
-      // This would involve:
-      // 1. Query user's NFT holdings to find Capsule-IDs
-      // 2. For each Capsule, read transaction history
-      // 3. Calculate 0.5% of SP from opens
-      // 4. Aggregate daily and all-time totals
-      
-      // For now, return empty data
-      const simulatedData: EarningsData = {
+      // On-chain aggregation of creator earnings is not yet implemented.
+      // Until it is, this dashboard returns honest zeros instead of mock
+      // data — fabricated USD figures would be worse than no figures.
+      const data: EarningsData = {
         totalSpToday: 0,
         totalSpAllTime: 0,
         usdEquivalent: 0,
-        xrdPrice: DEMO_XRD_PRICE,
-        capsules: []
+        xrdPrice: null,
+        capsules: [],
       };
-      
-      setEarningsData(simulatedData);
+      setEarningsData(data);
       setLastRefresh(new Date());
-      setIsLoading(false);
     } catch (error) {
-      console.error('Failed to fetch creator data:', error);
+      logger.error('Failed to fetch creator data', error, 'Creator');
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [address, isConnected]);
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
-    if (isConnected) {
-      fetchCreatorData();
-      
-      const interval = setInterval(fetchCreatorData, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isConnected, address]);
+    if (!isConnected) return;
+    fetchCreatorData();
+    const interval = setInterval(fetchCreatorData, 30000);
+    return () => clearInterval(interval);
+  }, [isConnected, fetchCreatorData]);
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null) return '—';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -86,9 +72,19 @@ const Creator = () => {
     }).format(amount);
   };
 
-  const formatXRD = (amount: number) => {
-    return `${amount.toFixed(3)} XRD`;
-  };
+  const formatXRD = (amount: number) => `${amount.toFixed(3)} XRD`;
+
+  if (!FEATURE_CREATOR_DASHBOARD) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-8 text-center max-w-md">
+          <Info className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Creator Dashboard</h1>
+          <p className="text-muted-foreground">This feature is not enabled.</p>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isConnected) {
     return (
@@ -98,12 +94,23 @@ const Creator = () => {
             <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h1 className="text-2xl font-bold mb-2">Creator Dashboard</h1>
             <p className="text-muted-foreground">
-              Connect your Radix wallet to view your Capsule earnings and creator statistics.
+              Connect your Radix wallet to view your Capsule earnings.
             </p>
           </div>
-          <div className="flex justify-center">
-            <radix-connect-button />
-          </div>
+          <Button
+            size="lg"
+            onClick={async () => {
+              try {
+                await connectWallet();
+              } catch {
+                // Errors are already logged by WalletContext.
+              }
+            }}
+            className="min-w-[200px] h-14 text-lg font-bold rounded-2xl bg-[#00C389] hover:bg-[#00AB7A] text-white border-0 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+          >
+            <Wallet size={20} className="mr-2" />
+            Connect Wallet
+          </Button>
         </Card>
       </div>
     );
@@ -112,7 +119,6 @@ const Creator = () => {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -120,10 +126,10 @@ const Creator = () => {
               Creator Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
-              Track your Capsule performance and earnings
+              Track your Capsule performance and earnings.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {lastRefresh && (
               <span className="text-xs text-muted-foreground">
@@ -137,96 +143,91 @@ const Creator = () => {
               size="sm"
               className="flex items-center gap-2"
             >
-              <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+              <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
               Refresh
             </Button>
           </div>
         </div>
 
-        {/* Wallet Info */}
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-sm">
-              Connected: {address?.slice(0, 20)}...
-            </span>
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="text-sm">Connected: {address?.slice(0, 20)}…</span>
           </div>
         </Card>
 
-        {/* Loading State */}
+        {/* Honest banner: dashboard is wired but data sources aren't yet. */}
+        <Card className="p-4 bg-muted/40 border-dashed">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-primary mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium mb-1">On-chain data integration in progress</p>
+              <p className="text-muted-foreground">
+                Earnings are calculated from on-chain transactions. Until the
+                Capsule resource address is published, this view shows zero
+                instead of estimated figures.
+              </p>
+            </div>
+          </div>
+        </Card>
+
         {isLoading && !earningsData && (
           <Card className="p-8 text-center">
             <RefreshCw className="w-8 h-8 mx-auto animate-spin text-primary mb-4" />
-            <p className="text-lg font-medium">Scanning blockchain for your Capsules...</p>
-            <p className="text-muted-foreground text-sm mt-2">
-              Reading transaction history and calculating earnings
-            </p>
+            <p className="text-lg font-medium">Loading…</p>
           </Card>
         )}
 
-        {/* Earnings Overview */}
         {earningsData && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Today's Earnings */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Today's Earnings</h3>
                   <Zap className="w-5 h-5 text-yellow-500" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-3xl font-bold text-primary">
-                    {formatXRD(earningsData.totalSpToday)}
-                  </p>
+                  <p className="text-3xl font-bold text-primary">{formatXRD(earningsData.totalSpToday)}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(earningsData.totalSpToday * earningsData.xrdPrice)}
+                    {formatCurrency(earningsData.xrdPrice === null ? null : earningsData.totalSpToday * earningsData.xrdPrice)}
                   </p>
                 </div>
               </Card>
 
-              {/* All-Time Earnings */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">All-Time Earnings</h3>
                   <Coins className="w-5 h-5 text-blue-500" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-3xl font-bold text-primary">
-                    {formatXRD(earningsData.totalSpAllTime)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatCurrency(earningsData.usdEquivalent)}
-                  </p>
+                  <p className="text-3xl font-bold text-primary">{formatXRD(earningsData.totalSpAllTime)}</p>
+                  <p className="text-sm text-muted-foreground">{formatCurrency(earningsData.xrdPrice === null ? null : earningsData.usdEquivalent)}</p>
                 </div>
               </Card>
 
-              {/* XRD Price */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">XRD Price</h3>
                   <DollarSign className="w-5 h-5 text-green-500" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-3xl font-bold text-primary">
-                    {formatCurrency(earningsData.xrdPrice)}
-                  </p>
+                  <p className="text-3xl font-bold text-primary">{formatCurrency(earningsData.xrdPrice)}</p>
                   <p className="text-sm text-muted-foreground">
-                    Per XRD
+                    {earningsData.xrdPrice === null ? 'Price feed not configured' : 'Per XRD'}
                   </p>
                 </div>
               </Card>
             </div>
 
-            {/* Capsule Performance */}
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-6">Your Capsules</h3>
-              
+
               {earningsData.capsules.length === 0 ? (
                 <div className="text-center py-8">
                   <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                  <h4 className="text-lg font-medium mb-2">No Capsules Found</h4>
+                  <h4 className="text-lg font-medium mb-2">No Capsules yet</h4>
                   <p className="text-muted-foreground">
-                    You haven't created any Capsules yet. Start creating to earn from opens!
+                    You haven't created any Capsules. Start creating to earn from opens.
                   </p>
                 </div>
               ) : (
@@ -236,17 +237,11 @@ const Creator = () => {
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-semibold">{capsule.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            ID: {capsule.id.slice(0, 20)}...
-                          </p>
+                          <p className="text-sm text-muted-foreground">ID: {capsule.id.slice(0, 20)}…</p>
                         </div>
-                        <Badge variant="outline">
-                          {capsule.totalOpens} opens
-                        </Badge>
+                        <Badge variant="outline">{capsule.totalOpens} opens</Badge>
                       </div>
-                      
                       <Separator className="my-3" />
-                      
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Today</p>
@@ -259,14 +254,12 @@ const Creator = () => {
                         <div>
                           <p className="text-muted-foreground">USD Value</p>
                           <p className="font-medium">
-                            {formatCurrency(capsule.spEarnedAllTime * earningsData.xrdPrice)}
+                            {formatCurrency(earningsData.xrdPrice === null ? null : capsule.spEarnedAllTime * earningsData.xrdPrice)}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Last Updated</p>
-                          <p className="font-medium">
-                            {capsule.lastUpdated.toLocaleTimeString()}
-                          </p>
+                          <p className="font-medium">{capsule.lastUpdated.toLocaleTimeString()}</p>
                         </div>
                       </div>
                     </div>
@@ -275,15 +268,14 @@ const Creator = () => {
               )}
             </Card>
 
-            {/* Info Card */}
             <Card className="p-4 bg-muted/50">
               <div className="flex items-start gap-3">
                 <TrendingUp className="w-5 h-5 text-primary mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium mb-1">How Creator Earnings Work</p>
+                  <p className="font-medium mb-1">How creator earnings work</p>
                   <p className="text-muted-foreground">
-                    You earn 0.5% of SP from every open of your created Capsules. 
-                    Earnings are calculated in real-time from on-chain transaction data.
+                    You earn 0.5% of SP from every open of your Capsules. Earnings
+                    are calculated from on-chain transaction data.
                   </p>
                 </div>
               </div>

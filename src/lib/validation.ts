@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
-// Wallet address validation
+// Wallet address validation — strict Bech32m format for Radix addresses.
+// Stokenet: account_tdx_2_1...  |  Mainnet: account_rdx1...
+// This regex is intentionally strict to prevent manifest injection.
 export const walletAddressSchema = z.string()
-  .min(10, 'Invalid wallet address')
-  .max(200, 'Invalid wallet address')
-  .regex(/^account_/, 'Must be a valid Radix account address');
+  .regex(
+    /^account_(tdx_2_1|rdx1)[a-z0-9]{50,65}$/,
+    'Must be a valid Radix account address'
+  );
 
 // Transaction hash validation
 export const txHashSchema = z.string()
@@ -20,10 +23,12 @@ export const tierSchema = z.object({
 });
 
 // Balance validation
+// Sanity cap at 10 trillion XRD (~10× total supply). This catches obviously
+// malformed/poisoned responses without rejecting realistic large balances.
 export const balanceSchema = z.number()
   .nonnegative('Balance cannot be negative')
   .finite('Invalid balance value')
-  .max(1000000, 'Balance exceeds maximum');
+  .max(1e13, 'Balance exceeds plausible range');
 
 // Nonce validation
 export const nonceSchema = z.number()
@@ -67,7 +72,7 @@ export const safeParseNumber = (value: unknown, defaultValue = 0): number => {
 };
 
 // Sanitize for logging (remove sensitive data)
-export const sanitizeForLogging = (data: any): any => {
+export const sanitizeForLogging = (data: unknown): unknown => {
   if (typeof data === 'string') {
     // Truncate long strings, hide potential addresses/hashes
     if (data.startsWith('account_') || data.length > 50) {
@@ -75,13 +80,13 @@ export const sanitizeForLogging = (data: any): any => {
     }
     return data;
   }
-  
+
   if (Array.isArray(data)) {
     return data.map(sanitizeForLogging);
   }
-  
+
   if (data && typeof data === 'object') {
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       // Skip sensitive fields
       if (['privateKey', 'secret', 'password', 'token'].includes(key)) {
@@ -92,6 +97,6 @@ export const sanitizeForLogging = (data: any): any => {
     }
     return sanitized;
   }
-  
+
   return data;
 };
