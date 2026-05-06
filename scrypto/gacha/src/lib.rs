@@ -36,6 +36,11 @@ pub struct TierConfig {
 /// Emitted every time a badge is successfully minted.
 /// Off-chain indexers can subscribe to this event to update leaderboards,
 /// trigger push notifications, etc.
+///
+/// SECURITY: `transaction_hash` is immutable and cryptographically bound to
+/// the caller. It cannot be spoofed, unlike a self-reported address string.
+/// Off-chain consumers should correlate via the Gateway API to discover the
+/// true transaction signer.
 #[derive(ScryptoSbor)]
 pub struct BadgeMinted {
     pub tier: String,
@@ -43,9 +48,9 @@ pub struct BadgeMinted {
     pub sp: u64,
     pub nonce: u64,
     pub badge_id: NonFungibleLocalId,
-    /// The account address that initiated the mint.
-    /// Passed by the caller (frontend) for off-chain correlation.
-    pub recipient: String,
+    /// Immutable transaction hash for off-chain correlation.
+    /// Use the Gateway API to look up the actual caller from this hash.
+    pub transaction_hash: Hash,
 }
 
 impl ScryptoEvent for BadgeMinted {
@@ -206,22 +211,20 @@ mod gacha_minter {
         /// Mint a gacha badge in exchange for XRD.
         ///
         /// # Arguments
-        /// * `payment` — Fungible bucket containing exactly the tier price in XRD.
+        /// * `payment` — Fungible bucket containing at least the tier price in XRD.
         /// * `tier` — Tier id: "common", "rare", or "epic".
         /// * `nonce` — Client-generated nonce (stored in badge metadata for correlation).
-        /// * `recipient` — Account address of the minter for off-chain event indexing.
         ///
         /// # Returns
         /// * `NonFungibleBucket` — The newly minted badge NFT.
         ///
         /// # Panics
-        /// Panics if the tier is unknown or the payment amount is incorrect.
+        /// Panics if the tier is unknown or the payment amount is insufficient.
         pub fn mint_gacha_badge(
             &mut self,
             payment: FungibleBucket,
             tier: String,
             nonce: u64,
-            recipient: String,
         ) -> NonFungibleBucket {
             assert!(self.enabled, "Minting is currently paused");
 
@@ -272,7 +275,7 @@ mod gacha_minter {
                 sp: config.sp,
                 nonce,
                 badge_id: badge_id.clone(),
-                recipient,
+                transaction_hash: Runtime::transaction_hash(),
             });
 
             badge
@@ -288,6 +291,13 @@ mod gacha_minter {
                 admin_badge.resource_address() == self.admin_badge_address,
                 "Invalid admin badge"
             );
+            assert!(amount > Decimal::ZERO, "Withdrawal amount must be positive");
+            assert!(
+                amount <= self.xrd_vault.amount(),
+                "Insufficient balance: requested {} but vault holds {}",
+                amount,
+                self.xrd_vault.amount()
+            );
             let bucket = self.xrd_vault.take(amount);
             Runtime::emit_event(XrdWithdrawn {
                 amount,
@@ -297,11 +307,12 @@ mod gacha_minter {
         }
 
         /// Update tier pricing or SP rewards. Admin only.
+        /// The tier must already exist; use `add_tier` to create new tiers.
         ///
         /// # Arguments
         /// * `tier` — Tier id to update.
-        /// * `price` — New price in XRD.
-        /// * `sp` — New SP reward.
+        /// * `price` — New price in XRD (must be strictly positive).
+        /// * `sp` — New SP reward (must be strictly positive).
         /// * `rarity` — New rarity label.
         /// * `admin_badge` — Proof of admin badge ownership.
         pub fn update_tier(
@@ -315,6 +326,12 @@ mod gacha_minter {
             assert!(
                 admin_badge.resource_address() == self.admin_badge_address,
                 "Invalid admin badge"
+            );
+            assert!(price > Decimal::ZERO, "Price must be strictly positive");
+            assert!(sp > 0, "SP must be strictly positive");
+            assert!(
+                self.tier_configs.contains_key(&tier),
+                "Tier does not exist; use add_tier to create it"
             );
             self.tier_configs.insert(
                 tier.clone(),
@@ -330,6 +347,14 @@ mod gacha_minter {
         }
 
         /// Add a new tier. Admin only.
+        /// The tier must not already exist; use `update_tier` to modify existing tiers.
+        ///
+        /// # Arguments
+        /// * `tier` — Tier id to create.
+        /// * `price` — Price in XRD (must be strictly positive).
+        /// * `sp` — SP reward (must be strictly positive).
+        /// * `rarity` — Rarity label.
+        /// * `admin_badge` — Proof of admin badge ownership.
         pub fn add_tier(
             &mut self,
             tier: String,
@@ -341,6 +366,12 @@ mod gacha_minter {
             assert!(
                 admin_badge.resource_address() == self.admin_badge_address,
                 "Invalid admin badge"
+            );
+            assert!(price > Decimal::ZERO, "Price must be strictly positive");
+            assert!(sp > 0, "SP must be strictly positive");
+            assert!(
+                !self.tier_configs.contains_key(&tier),
+                "Tier already exists; use update_tier to modify it"
             );
             self.tier_configs.insert(
                 tier.clone(),
@@ -391,6 +422,9 @@ mod gacha_minter {
                 admin_badge.resource_address() == self.admin_badge_address,
                 "Invalid admin badge"
             );
+            if self.enabled == enabled {
+                return; // no-op, no event
+            }
             self.enabled = enabled;
             Runtime::emit_event(EnabledChanged { enabled });
         }

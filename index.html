@@ -13,8 +13,11 @@
     <link rel="preconnect" href="https://babylon-stokenet-gateway.radixdlt.com">
     <link rel="dns-prefetch" href="https://babylon-stokenet-gateway.radixdlt.com">
     <!-- Fonts are self-hosted to eliminate external CSS dependency and privacy leak. -->
+    <!-- OneSignal SDK loader is self-hosted to reduce CDN exposure.
+         The loader may dynamically fetch additional modules from cdn.onesignal.com.
+         This is a known limitation of the OneSignal architecture. -->
     <script
-      src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+      src="/onesignal/OneSignalSDK.page.js"
       defer
       integrity="sha384-9WymDdowrrUwJuXZ2joqlQYNQSPWfKsyBecZsqaJgsTur2qmjjrc3YQVGiaFdFdA"
       crossorigin="anonymous"

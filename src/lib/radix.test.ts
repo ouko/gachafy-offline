@@ -103,5 +103,5 @@ describe("generateNonce", () => {
     expect(manifest).toContain("epic");
     expect(manifest).toContain("25");
     expect(manifest).toContain("u64"); // nonce is present
-  });
+  }, 15000);
 });

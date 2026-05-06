@@ -20,7 +20,9 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Source maps are disabled in production to prevent TypeScript source
+    // exposure. Upload maps privately to Sentry if error tracking is needed.
+    sourcemap: false,
     minify: 'esbuild',
     rollupOptions: {
       output: {

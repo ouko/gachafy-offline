@@ -83,18 +83,16 @@ fn test_mint_happy_path() {
     )
     .unwrap();
 
-    // Act — mint a common badge (auth module disabled so component proof works)
-    let badge = env.with_auth_module_disabled(|env| {
-        env.call_method_typed::<_, _, Bucket>(
-            component,
-            "mint_gacha_badge",
-            &(
-                payment,
-                "common".to_string(),
-                42u64,
-            ),
-        )
-    });
+    // Act — mint a common badge
+    let badge = env.call_method_typed::<_, _, Bucket>(
+        component,
+        "mint_gacha_badge",
+        &(
+            payment,
+            "common".to_string(),
+            42u64,
+        ),
+    );
 
     // Assert
     assert!(badge.is_ok(), "Mint failed: {:?}", badge.err());
@@ -145,13 +143,11 @@ fn test_mint_wrong_payment_fails() {
     .unwrap();
 
     // Act & Assert
-    let result = env.with_auth_module_disabled(|env| {
-        env.call_method_typed::<_, _, Bucket>(
-            component,
-            "mint_gacha_badge",
-            &(payment, "common".to_string(), 1u64),
-        )
-    });
+    let result = env.call_method_typed::<_, _, Bucket>(
+        component,
+        "mint_gacha_badge",
+        &(payment, "common".to_string(), 1u64),
+    );
 
     assert!(result.is_err(), "Expected mint with wrong payment to fail");
 }
@@ -188,13 +184,11 @@ fn test_mint_invalid_tier_fails() {
     .unwrap();
 
     // Act & Assert
-    let result = env.with_auth_module_disabled(|env| {
-        env.call_method_typed::<_, _, Bucket>(
-            component,
-            "mint_gacha_badge",
-            &(payment, "legendary".to_string(), 1u64),
-        )
-    });
+    let result = env.call_method_typed::<_, _, Bucket>(
+        component,
+        "mint_gacha_badge",
+        &(payment, "legendary".to_string(), 1u64),
+    );
 
     assert!(result.is_err(), "Expected mint with invalid tier to fail");
 }

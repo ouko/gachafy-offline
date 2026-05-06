@@ -225,8 +225,7 @@ class RadixService {
         "mint_gacha_badge"
         Bucket("xrd_bucket")
         "${tier}"
-        ${nonce}u64
-        "${safeAddress}";
+        ${nonce}u64;
 
       CALL_METHOD
         Address("${accountAddress}")

@@ -20,7 +20,7 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
     X-XSS-Protection = "0"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://babylon-stokenet-gateway.radixdlt.com https://stokenet.radixdlt.com https://mainnet.radixdlt.com https://onesignal.com https://*.onesignal.com wss://*.onesignal.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.onesignal.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://babylon-stokenet-gateway.radixdlt.com https://stokenet.radixdlt.com https://mainnet.radixdlt.com https://onesignal.com https://*.onesignal.com wss://*.onesignal.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
 
 [[headers]]
   for = "/sw.js"

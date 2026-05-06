@@ -30,7 +30,30 @@ export function initSentry() {
     beforeSend(event) {
       const level = event.level;
       if (level === 'info' || level === 'debug') return null;
-      return event;
+
+      // Scrub Radix wallet addresses from all event fields to prevent PII leaks.
+      // Addresses match the pattern: account_tdx_2_1... or account_rdx1...
+      const scrubAddresses = (obj: unknown): unknown => {
+        if (typeof obj === 'string') {
+          return obj.replace(
+            /account_(tdx_2_1|rdx1)[a-z0-9]{50,65}/g,
+            '[REDACTED_WALLET_ADDRESS]'
+          );
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(scrubAddresses);
+        }
+        if (obj !== null && typeof obj === 'object') {
+          const result: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(obj)) {
+            result[key] = scrubAddresses(value);
+          }
+          return result;
+        }
+        return obj;
+      };
+
+      return scrubAddresses(event) as typeof event;
     },
     // Reduce noise from browser extensions
     denyUrls: [
