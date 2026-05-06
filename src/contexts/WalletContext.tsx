@@ -1,3 +1,23 @@
+/**
+ * Wallet Context — single source of truth for wallet state.
+ *
+ * Holds:
+ *   - Connected address
+ *   - XRD balance (polled every 5s when visible, 30s when hidden)
+ *   - Pending transaction hash
+ *   - Optimistic balance delta (applied immediately on mint, removed when poll confirms)
+ *
+ * Connection flow:
+ *   1. Component calls connectWallet() (exposed by this context)
+ *   2. RadixService asks RDT to send a wallet data request
+ *   3. User approves in their wallet extension / mobile app
+ *   4. RDT fires onWalletData callback with the account address
+ *   5. WalletContext updates state → components re-render
+ *
+ * This context also subscribes to RDT wallet data updates on mount so that
+ * if the user disconnects in the wallet UI, the app reflects it immediately.
+ */
+
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getRadixService } from "@/lib/radix-lazy";
 import { oneSignalService } from "@/lib/oneSignal";

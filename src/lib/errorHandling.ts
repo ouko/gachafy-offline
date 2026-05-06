@@ -1,3 +1,17 @@
+/**
+ * Error handling utilities.
+ *
+ * Provides:
+ *   - Structured error classes (AppError, NetworkError, TransactionError, etc.)
+ *   - Retry logic with exponential backoff for transient failures
+ *   - Timeout wrappers for async operations
+ *   - Global error boundary fallback UI
+ *
+ * All errors are logged via the logger module (which sanitises sensitive fields
+ * before sending to Sentry). Operational errors (user mistakes, network hiccups)
+ * are surfaced as toasts; unexpected errors are sent to Sentry.
+ */
+
 import { toast } from 'sonner';
 import { logger } from './logger';
 

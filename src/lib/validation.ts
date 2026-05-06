@@ -1,3 +1,15 @@
+/**
+ * Input validation schemas (Zod).
+ *
+ * ALL user-facing inputs are validated through these schemas before they reach
+ * the blockchain layer. This is a defence-in-depth measure — the smart contract
+ * also validates, but catching bad input early prevents useless transactions
+ * and improves error messages.
+ *
+ * Security-critical: walletAddressSchema uses a strict Bech32m regex. Do not
+ * relax it without reading the security audit (docs/security-audit.md LOW-1).
+ */
+
 import { z } from 'zod';
 
 // Wallet address validation — strict Bech32m format for Radix addresses.

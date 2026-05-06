@@ -23,16 +23,16 @@ npm run dev
 
 ### Deploy to Production
 ```bash
-# Vercel (recommended)
-npm i -g vercel
-vercel
+# Docker + nginx (recommended)
+docker-compose up -d
 
 # Or Netlify
 npm i -g netlify-cli
 netlify deploy --prod
 
-# Or Docker
-docker-compose up -d
+# Or any static host
+npm run build
+# Upload 'dist/' to S3, Cloudflare Pages, GitHub Pages, etc.
 ```
 
 See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for detailed deployment instructions.
@@ -103,11 +103,13 @@ gachafi/
 ├── .env.example        # Environment template
 ├── Dockerfile          # Docker configuration
 ├── docker-compose.yml  # Docker Compose setup
-├── vercel.json        # Vercel deployment config
 ├── netlify.toml       # Netlify deployment config
 ├── DEPLOYMENT.md      # Quick deployment guide
 ├── README.production.md  # Detailed production guide
-└── DATABASE_ALTERNATIVES.md  # Database migration guide
+├── docs/GETTING_STARTED.md # New developer guide
+├── docs/SCRYPTO_GUIDE.md   # Smart contract guide
+├── docs/ARCHITECTURE.md    # System architecture
+└── docs/security-audit.md  # Security audit results
 ```
 
 ## 🚢 Deployment Options
@@ -187,12 +189,25 @@ See `.github/workflows/ci.yml`
 
 ## 📚 Documentation
 
-- **[LOVABLE_INDEPENDENCE_CHECKLIST.md](./LOVABLE_INDEPENDENCE_CHECKLIST.md)** - Verify zero Lovable dependencies ⭐
-- **[INDEPENDENCE.md](./INDEPENDENCE.md)** - Complete independence proof & alternatives
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Quick deployment guide
-- **[README.production.md](./README.production.md)** - Comprehensive production guide
-- **[DATABASE_ALTERNATIVES.md](./DATABASE_ALTERNATIVES.md)** - Database migration options
-- **[SELF_HOSTING.md](./SELF_HOSTING.md)** - Complete self-hosting guide ($5/month)
+### For New Developers
+- **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)** — Clone, install, run, and understand the codebase
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — How the pieces fit together (diagrams, data flow, trust boundaries)
+- **[docs/SCRYPTO_GUIDE.md](./docs/SCRYPTO_GUIDE.md)** — Build, deploy, and administer the smart contract
+
+### For Operators
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Platform-specific deployment instructions
+- **[README.production.md](./README.production.md)** — Comprehensive production checklist
+- **[SELF_HOSTING.md](./SELF_HOSTING.md)** — Complete self-hosting guide ($5/month)
+- **[docs/BRANCH_PROTECTION.md](./docs/BRANCH_PROTECTION.md)** — GitHub branch protection setup
+
+### For Auditors
+- **[docs/security-audit.md](./docs/security-audit.md)** — Full security audit (STRIDE, OWASP, findings)
+- **[docs/backend-architecture-audit.md](./docs/backend-architecture-audit.md)** — Backend architecture review
+- **[docs/ux-audit.md](./docs/ux-audit.md)** — UX research and fixes
+
+### Migration & Independence
+- **[INDEPENDENCE.md](./INDEPENDENCE.md)** — Complete independence proof & alternatives
+- **[LOVABLE_INDEPENDENCE_CHECKLIST.md](./LOVABLE_INDEPENDENCE_CHECKLIST.md)** — Verify zero Lovable dependencies ⭐
 
 ## 🎯 Complete Independence Verification
 

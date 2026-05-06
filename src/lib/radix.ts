@@ -1,3 +1,21 @@
+/**
+ * Radix blockchain service.
+ *
+ * This is the ONLY file that directly imports @radixdlt/radix-dapp-toolkit.
+ * Every other module should use `getRadixService()` from `radix-lazy.ts` to
+ * avoid bloating the initial JavaScript bundle.
+ *
+ * Responsibilities:
+ *   - Lazy-load RDT and initialise it with network + dApp config
+ *   - Connect wallet (request account access)
+ *   - Build and submit transaction manifests for minting
+ *   - Poll balances and transaction status via the Gateway API
+ *   - Generate nonces for transaction correlation
+ *
+ * Architecture note: This is a singleton. Instantiate once via `radixService`
+ * and share through React Context (WalletContext).
+ */
+
 import type { RadixDappToolkit } from '@radixdlt/radix-dapp-toolkit';
 import { withRetry, withTimeout, NetworkError, TransactionError } from './errorHandling';
 import { validateInput, walletAddressSchema, balanceSchema, nonceSchema } from './validation';
