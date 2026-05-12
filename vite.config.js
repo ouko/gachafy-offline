@@ -5,6 +5,34 @@ import tailwindcss from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
 
 export default defineConfig({
+  server: {
+    port: 3021,
+    strictPort: true,
+    hmr: {
+      overlay: false,
+      clientPort: 3021
+    },
+    watch: {
+      usePolling: true
+    }
+  },
+  build: {
+    target: 'es2020',
+    commonjsOptions: {
+      transformMixedEsModules: true
+    },
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          toolkit: ['@radixdlt/radix-dapp-toolkit', '@radixdlt/babylon-gateway-api-sdk'],
+          ui: ['framer-motion', 'zustand']
+        }
+      }
+    }
+  },
   css: {
     postcss: {
       plugins: [
@@ -14,7 +42,10 @@ export default defineConfig({
     }
   },
   plugins: [
-    react(),
+    react({
+      fastRefresh: true,
+      jsxRuntime: 'classic'
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {

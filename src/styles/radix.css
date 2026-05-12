@@ -1,0 +1,12 @@
+/* Radix Connect Button Styling */
+radix-connect-button {
+  --rdx-button-background: theme(colors.white);
+  --rdx-button-background-hover: theme(colors.white/90);
+  --rdx-button-text: theme(colors.primary);
+  --rdx-button-text-hover: theme(colors.primary);
+  --rdx-button-border: none;
+  --rdx-button-border-hover: none;
+  --rdx-button-shadow: theme(boxShadow.lg);
+  --rdx-button-border-radius: theme(borderRadius.xl);
+  --rdx-button-padding: theme(padding.4) theme(padding.6);
+}
