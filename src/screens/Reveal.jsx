@@ -10,31 +10,35 @@ const RARITY_CONFIG = {
     label: 'COMMON',
     color: '#9CA3AF',
     gradient: 'from-neutral-600 to-neutral-800',
-    glow: 'shadow-none'
+    glow: 'shadow-none',
+    vibe: 'bg-neutral-500/10'
   },
   rare: {
     label: 'RARE',
     color: '#00F0FF',
     gradient: 'from-accent-cyan/30 to-accent-cyan/10',
-    glow: 'shadow-glow-cyan'
+    glow: 'shadow-glow-cyan',
+    vibe: 'bg-accent-cyan/10'
   },
   epic: {
     label: 'EPIC',
     color: '#B829F7',
     gradient: 'from-secondary-500/40 to-secondary-500/20',
-    glow: 'shadow-glow-violet'
+    glow: 'shadow-glow-violet',
+    vibe: 'bg-secondary-500/10'
   },
   legendary: {
     label: 'LEGENDARY',
     color: '#FF006E',
     gradient: 'from-primary-500/50 to-secondary-500/30',
-    glow: 'shadow-glow-pink'
+    glow: 'shadow-glow-pink',
+    vibe: 'bg-primary-500/10'
   }
 }
 
 export default function Reveal() {
   const history = useHistory()
-  const { selectedTier, completeLootReveal, lastOpenedTier, capsules, addCapsule } = useStore()
+  const { selectedTier, completeLootReveal, lastOpenedTier, addCapsule } = useStore()
   const [revealed, setRevealed] = useState(false)
   const [items, setItems] = useState([])
 
@@ -42,12 +46,10 @@ export default function Reveal() {
   useEffect(() => {
     const tier = lastOpenedTier || selectedTier
     if (!tier) {
-      // No tier selected, redirect home
       history.push('/')
       return
     }
 
-    // Generate loot items
     const rarityWeights = {
       8: [0.6, 0.3, 0.08, 0.02],
       15: [0.4, 0.35, 0.2, 0.05],
@@ -89,7 +91,6 @@ export default function Reveal() {
 
     setItems(generatedItems)
 
-    // Add the main item to capsule inventory
     addCapsule({
       id: `capsule_${Date.now()}`,
       name: mainName,
@@ -116,8 +117,8 @@ export default function Reveal() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-5 pt-16 pb-28">
-      <main id="main-content" className="app-container flex flex-col items-center w-full max-w-sm">
+    <div className={`flex min-h-screen flex-col items-center justify-center px-5 transition-colors duration-1000 ${revealed ? rarity.vibe : 'bg-transparent'}`}>
+      <main id="main-content" className="app-container flex flex-col items-center w-full max-w-md">
 
         <AnimatePresence mode="wait">
           {!revealed ? (
@@ -125,39 +126,50 @@ export default function Reveal() {
               key="burst"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, scale: 1.5, filter: 'blur(20px)' }}
+              transition={{ duration: 0.6 }}
               aria-label="Loot reveal"
               className="flex flex-col items-center"
             >
               <MotionLootBurst onComplete={handleRevealComplete} />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+                className="mt-8 text-center"
+              >
+                <p className="font-display font-black text-2xl text-white tracking-widest animate-pulse">OPENING...</p>
+              </motion.div>
             </motion.section>
           ) : (
             <motion.div
               key="result"
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.8, type: "spring", damping: 15 }}
               className="flex flex-col items-center w-full"
             >
-              {/* Rarity banner */}
+              {/* Rarity banner with drama */}
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: -40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mb-6"
+                transition={{ delay: 0.2, type: "spring" }}
+                className="mb-8"
               >
                 <div
-                  className="px-6 py-2 rounded-full border"
+                  className="px-8 py-2.5 rounded-full border-2 relative"
                   style={{
-                    backgroundColor: rarity.color + '15',
-                    borderColor: rarity.color + '40',
-                    boxShadow: `0 0 30px ${rarity.color}30`
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    borderColor: rarity.color,
+                    boxShadow: `0 0 40px ${rarity.color}60, inset 0 0 20px ${rarity.color}40`
                   }}
                 >
                   <span
-                    className="font-display text-body-sm font-bold tracking-[0.2em]"
-                    style={{ color: rarity.color }}
+                    className="font-display text-base font-black tracking-[0.3em] italic"
+                    style={{
+                      color: rarity.color,
+                      textShadow: `0 0 10px ${rarity.color}`
+                    }}
                   >
                     {rarity.label}
                   </span>
@@ -165,32 +177,36 @@ export default function Reveal() {
               </motion.div>
 
               {/* Loot cards */}
-              <LootCardStack items={items} />
+              <div className="w-full relative py-4">
+                 {/* Spotlight effect behind card */}
+                 <div
+                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 blur-[80px] rounded-full opacity-50 z-[-1]"
+                   style={{ backgroundColor: rarity.color }}
+                 />
+                 <LootCardStack items={items} />
+              </div>
 
-              {/* Actions */}
+              {/* Actions - Redesigned chunky buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="mt-8 w-full flex flex-col gap-3"
+                transition={{ delay: 1 }}
+                className="mt-12 w-full flex flex-col gap-5 max-w-xs"
               >
                 <motion.button
                   onClick={handleInventory}
                   className="w-full relative group"
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: 0.96, translateY: 3 }}
                 >
-                  <div
-                    className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 opacity-30 blur-lg group-hover:opacity-50 transition-opacity"
-                    aria-hidden="true"
-                  />
-                  <div className="relative w-full py-4 rounded-2xl font-display font-bold text-base tracking-wide text-center bg-gradient-to-b from-primary-500 to-primary-600 border-t border-white/20 shadow-[0_4px_0_#990042,0_8px_24px_rgba(255,0,110,0.3)] active:shadow-[0_1px_0_#990042,0_2px_8px_rgba(255,0,110,0.2)] active:translate-y-[3px] transition-all duration-100">
-                    VIEW LOOT
+                  <div className="absolute inset-0 translate-y-1.5 rounded-2xl bg-primary-800" />
+                  <div className="relative w-full py-4.5 rounded-2xl font-display font-black text-lg tracking-tight text-center bg-gradient-to-b from-primary-400 to-primary-600 text-white border-t border-white/30 group-active:translate-y-1 transition-all">
+                    ADD TO BAG
                   </div>
                 </motion.button>
 
                 <button
                   onClick={handleAgain}
-                  className="w-full py-3 rounded-2xl font-display font-semibold text-body text-text-secondary hover:text-white hover:bg-white/5 border border-white/10 transition-all duration-200"
+                  className="w-full py-4 rounded-2xl font-display font-bold text-sm text-white/70 hover:text-white bg-white/5 border border-white/10 transition-all uppercase tracking-widest"
                 >
                   Summon Again
                 </button>

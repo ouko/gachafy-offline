@@ -1,9 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useStore } from '../../store'
 import CapsuleInventory from '../CapsuleInventory'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-jest.mock('../../store', () => ({
-  useStore: jest.fn()
+vi.mock('../../store', () => ({
+  useStore: vi.fn()
 }))
 
 describe('CapsuleInventory', () => {
@@ -16,8 +17,8 @@ describe('CapsuleInventory', () => {
     useStore.mockReturnValue({
       capsules: mockCapsules,
       selectedCapsule: null,
-      selectCapsule: jest.fn(),
-      openCapsule: jest.fn()
+      selectCapsule: vi.fn(),
+      openCapsule: vi.fn()
     })
   })
 
@@ -31,20 +32,20 @@ describe('CapsuleInventory', () => {
     useStore.mockReturnValue({
       capsules: [],
       selectedCapsule: null,
-      selectCapsule: jest.fn(),
-      openCapsule: jest.fn()
+      selectCapsule: vi.fn(),
+      openCapsule: vi.fn()
     })
     render(<CapsuleInventory />)
     expect(screen.getByText(/no capsules/i)).toBeInTheDocument()
   })
 
   it('calls selectCapsule when clicking a capsule', () => {
-    const selectCapsule = jest.fn()
+    const selectCapsule = vi.fn()
     useStore.mockReturnValue({
       capsules: mockCapsules,
       selectedCapsule: null,
       selectCapsule,
-      openCapsule: jest.fn()
+      openCapsule: vi.fn()
     })
 
     render(<CapsuleInventory />)
@@ -56,8 +57,8 @@ describe('CapsuleInventory', () => {
     useStore.mockReturnValue({
       capsules: mockCapsules,
       selectedCapsule: '1',
-      selectCapsule: jest.fn(),
-      openCapsule: jest.fn()
+      selectCapsule: vi.fn(),
+      openCapsule: vi.fn()
     })
 
     render(<CapsuleInventory />)
@@ -65,11 +66,11 @@ describe('CapsuleInventory', () => {
   })
 
   it('calls openCapsule when clicking open button', () => {
-    const openCapsule = jest.fn()
+    const openCapsule = vi.fn()
     useStore.mockReturnValue({
       capsules: mockCapsules,
       selectedCapsule: '1',
-      selectCapsule: jest.fn(),
+      selectCapsule: vi.fn(),
       openCapsule
     })
 

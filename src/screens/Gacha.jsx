@@ -1,8 +1,7 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { useHistory } from 'react-router-dom'
 import { useStore } from '../store'
-import OpenButton from '../components/shared/OpenButton'
 import CapsuleVisual from '../components/shared/CapsuleVisual'
 
 const TIER_MAP = {
@@ -18,6 +17,10 @@ const TIER_MAP = {
 export default function Gacha() {
   const history = useHistory()
   const { selectedTier, wallet, connectWallet, status } = useStore()
+
+  const y = useMotionValue(0)
+  const opacity = useTransform(y, [0, -150], [1, 0])
+  const scale = useTransform(y, [0, -150], [1, 1.2])
 
   const capsuleTier = TIER_MAP[selectedTier] || 'bronze'
   const isConnected = wallet?.connected
@@ -36,36 +39,52 @@ export default function Gacha() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-hidden">
       <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-5 pt-16 pb-4">
 
         {/* Instruction text */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-caption text-text-muted mb-6"
+          className="text-center mb-10"
         >
-          {isConnected ? 'Swipe up or tap to open' : 'Connect wallet to continue'}
-        </motion.p>
+          <h2 className="text-xl font-display font-bold text-white mb-1">READY TO SUMMON?</h2>
+          <p className="text-caption text-text-muted">
+            {isConnected ? 'SWIPE UP TO RELEASE THE CAPSULE' : 'CONNECT WALLET TO CONTINUE'}
+          </p>
+        </motion.div>
 
         {/* Draggable Capsule */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          onDragEnd={(e, { offset, velocity }) => {
-            if (offset.y < -60 || velocity.y < -600) {
-              handleSwipeUp()
-            }
-          }}
-          whileTap={{ scale: 0.96 }}
-          className="cursor-grab active:cursor-grabbing"
-        >
-          <CapsuleVisual tier={capsuleTier} size={200} animate={true} />
-        </motion.div>
+        <div className="relative">
+          {/* Summoning portal effect behind capsule */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary-500/20 blur-[60px] rounded-full z-[-1]"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.6, 0.3]
+            }}
+            transition={{ duration: 4, repeat: Infinity }}
+          />
+
+          <motion.div
+            style={{ y, opacity, scale }}
+            drag="y"
+            dragConstraints={{ top: -200, bottom: 0 }}
+            dragElastic={0.1}
+            onDragEnd={(e, { offset, velocity }) => {
+              if (offset.y < -100 || velocity.y < -500) {
+                handleSwipeUp()
+              } else {
+                y.set(0)
+              }
+            }}
+            whileTap={{ cursor: 'grabbing' }}
+            className="cursor-grab active:cursor-grabbing relative z-10"
+          >
+            <CapsuleVisual tier={capsuleTier} size={240} animate={true} />
+          </motion.div>
+        </div>
 
         {/* Swipe hint */}
         {isConnected && (
@@ -73,72 +92,52 @@ export default function Gacha() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mt-8 flex flex-col items-center gap-1"
+            className="mt-12 flex flex-col items-center gap-2"
           >
             <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              animate={{ y: [0, -12, 0], opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary-400">
                 <path d="m18 15-6-6-6 6"/>
               </svg>
             </motion.div>
-            <span className="text-caption text-text-muted">Swipe up</span>
+            <span className="text-[10px] font-bold text-text-muted tracking-[0.2em] uppercase">Release</span>
           </motion.div>
         )}
       </main>
 
-      {/* Bottom CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="px-5 pb-28"
-      >
-        <div className="app-container max-w-xs mx-auto">
-          {isConnected ? (
-            <OpenButton />
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <motion.button
-                onClick={handleConnect}
-                disabled={isConnecting}
-                className="w-full relative group"
-                whileTap={!isConnecting ? { scale: 0.97 } : {}}
-              >
-                <div
-                  className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary-500 to-secondary-500 opacity-40 blur-lg group-hover:opacity-60 transition-opacity duration-300"
-                  aria-hidden="true"
-                />
-                <div className={`
-                  relative w-full py-5 rounded-2xl font-display font-bold text-lg tracking-wide text-center
-                  bg-gradient-to-b from-primary-500 to-primary-600
-                  border-t border-white/20 shadow-[0_4px_0_#990042,0_8px_24px_rgba(255,0,110,0.4)]
-                  active:shadow-[0_1px_0_#990042,0_2px_8px_rgba(255,0,110,0.3)]
-                  active:translate-y-[3px]
-                  transition-all duration-100
-                  ${isConnecting ? 'opacity-70' : ''}
-                `}>
-                  {isConnecting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Connecting...
-                    </span>
-                  ) : (
-                    'CONNECT WALLET'
-                  )}
-                </div>
-              </motion.button>
-              <p className="text-caption text-text-muted text-center">
-                {isConnecting ? 'Approve in your wallet' : 'Connect to open capsules'}
-              </p>
-            </div>
-          )}
-        </div>
-      </motion.div>
+      {/* Bottom CTA for non-connected or alternate access */}
+      {!isConnected && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="px-5 pb-28"
+        >
+          <div className="app-container max-w-xs mx-auto">
+            <motion.button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="w-full relative group"
+              whileTap={!isConnecting ? { scale: 0.96 } : {}}
+            >
+              <div
+                className="absolute inset-0 translate-y-1.5 rounded-2xl bg-primary-800"
+              />
+              <div className={`
+                relative w-full py-5 rounded-2xl font-display font-black text-lg tracking-wide text-center
+                bg-gradient-to-b from-primary-500 to-primary-600
+                text-white border-t border-white/20
+                group-active:translate-y-1 transition-all
+                ${isConnecting ? 'opacity-70' : ''}
+              `}>
+                {isConnecting ? 'CONNECTING...' : 'CONNECT WALLET'}
+              </div>
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }

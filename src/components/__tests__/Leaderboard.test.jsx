@@ -1,9 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { useStore } from '../../store'
 import Leaderboard from '../Leaderboard'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-jest.mock('../../store', () => ({
-  useStore: jest.fn()
+vi.mock('../../store', () => ({
+  useStore: vi.fn()
 }))
 
 describe('Leaderboard', () => {
