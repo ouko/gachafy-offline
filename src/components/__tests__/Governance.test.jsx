@@ -1,9 +1,10 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { useStore } from '../../store'
 import Governance from '../Governance'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-jest.mock('../../store', () => ({
-  useStore: jest.fn()
+vi.mock('../../store', () => ({
+  useStore: vi.fn()
 }))
 
 describe('Governance', () => {
@@ -16,8 +17,8 @@ describe('Governance', () => {
     useStore.mockReturnValue({
       proposals: mockProposals,
       userVotes: {},
-      voteOnProposal: jest.fn(),
-      createProposal: jest.fn()
+      voteOnProposal: vi.fn(),
+      createProposal: vi.fn()
     })
   })
 
@@ -37,12 +38,12 @@ describe('Governance', () => {
   })
 
   it('allows voting on active proposals', () => {
-    const voteOnProposal = jest.fn()
+    const voteOnProposal = vi.fn()
     useStore.mockReturnValue({
       proposals: mockProposals,
       userVotes: {},
       voteOnProposal,
-      createProposal: jest.fn()
+      createProposal: vi.fn()
     })
 
     render(<Governance />)
@@ -54,8 +55,8 @@ describe('Governance', () => {
     useStore.mockReturnValue({
       proposals: mockProposals,
       userVotes: { '1': true },
-      voteOnProposal: jest.fn(),
-      createProposal: jest.fn()
+      voteOnProposal: vi.fn(),
+      createProposal: vi.fn()
     })
 
     render(<Governance />)
@@ -69,11 +70,11 @@ describe('Governance', () => {
   })
 
   it('submits new proposal', () => {
-    const createProposal = jest.fn()
+    const createProposal = vi.fn()
     useStore.mockReturnValue({
       proposals: [],
       userVotes: {},
-      voteOnProposal: jest.fn(),
+      voteOnProposal: vi.fn(),
       createProposal
     })
 

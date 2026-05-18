@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import AnimationErrorBoundary from '../AnimationErrorBoundary';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const ThrowError = () => {
   throw new Error('Test animation error');
@@ -7,11 +8,11 @@ const ThrowError = () => {
 
 describe('AnimationErrorBoundary', () => {
   beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    console.error.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it('renders children when no error occurs', () => {

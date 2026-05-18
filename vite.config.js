@@ -44,7 +44,7 @@ export default defineConfig({
   plugins: [
     react({
       fastRefresh: true,
-      jsxRuntime: 'classic'
+      jsxRuntime: 'automatic'
     }),
     VitePWA({
       registerType: 'autoUpdate',
