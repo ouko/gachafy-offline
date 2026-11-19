@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_RADIX_GATEWAY_URL?: string;
   readonly VITE_GACHA_PACKAGE_ADDRESS?: string;
   readonly VITE_GACHA_COMPONENT_ADDRESS?: string;
+  readonly VITE_GACHA_BADGE_RESOURCE?: string;
   readonly VITE_XRD_RESOURCE_ADDRESS?: string;
 
   readonly VITE_FEATURE_BRIDGE?: string;

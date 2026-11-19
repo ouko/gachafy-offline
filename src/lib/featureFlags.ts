@@ -37,5 +37,7 @@ export const FEATURE_CREATOR_DASHBOARD =
 
 /** True once the gacha Scrypto component is deployed and addresses are wired up. */
 export const GACHA_DEPLOYED = Boolean(
-  import.meta.env.VITE_GACHA_PACKAGE_ADDRESS && import.meta.env.VITE_GACHA_COMPONENT_ADDRESS,
+  import.meta.env.VITE_GACHA_PACKAGE_ADDRESS &&
+  import.meta.env.VITE_GACHA_COMPONENT_ADDRESS &&
+  import.meta.env.VITE_GACHA_BADGE_RESOURCE,
 );

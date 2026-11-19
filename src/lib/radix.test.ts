@@ -65,6 +65,11 @@ describe("RADIX_CONFIG", () => {
     expect(RADIX_CONFIG.xrdResourceAddress).toMatch(/^resource_/);
   });
 
+  it("exposes the configured badge resource address", () => {
+    expect(RADIX_CONFIG).toHaveProperty("gachaBadgeResourceAddress");
+    expect(RADIX_CONFIG.gachaBadgeResourceAddress).toMatch(/^$|^resource_/);
+  });
+
   it("has a dApp definition address", () => {
     expect(RADIX_CONFIG.dAppDefinitionAddress).toMatch(/^account_/);
   });
@@ -78,6 +83,7 @@ describe("generateNonce", () => {
     const { radixService } = await import("./radix");
 
     const mockSendTransaction = vi.fn().mockResolvedValue({
+      isOk: () => true,
       value: { transactionIntentHash: "txhash123" },
     });
 

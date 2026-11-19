@@ -41,6 +41,7 @@ export const RADIX_CONFIG = {
   xrdResourceAddress: import.meta.env.VITE_XRD_RESOURCE_ADDRESS || NETWORK_DEFAULT.xrdResourceAddress,
   gachaPackageAddress: import.meta.env.VITE_GACHA_PACKAGE_ADDRESS || '',
   gachaComponentAddress: import.meta.env.VITE_GACHA_COMPONENT_ADDRESS || '',
+  gachaBadgeResourceAddress: import.meta.env.VITE_GACHA_BADGE_RESOURCE || '',
   appName: import.meta.env.VITE_APP_NAME || 'GachaFi',
   appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
 };
