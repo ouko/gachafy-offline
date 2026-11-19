@@ -24,22 +24,17 @@ import { rateLimiter } from './rateLimiter';
 import { GACHA_DEPLOYED } from './featureFlags';
 import { RADIX_CONFIG, parseXrdAmount } from './radix-config';
 
-/** Cryptographically-random uint64-safe nonce. Falls back to Math.random
- *  only if crypto.getRandomValues is unavailable (very old browsers). */
+/** Cryptographically-random nonce within JavaScript's safe integer range. */
 const generateNonce = (): number => {
-  try {
-    const buf = new Uint32Array(2);
-    crypto.getRandomValues(buf);
-    // Combine to a value within Number.MAX_SAFE_INTEGER (2^53 - 1).
-    // Use top 21 bits of the high word + 32 bits of the low word.
-    const hi = buf[0] >>> 11; // 21 bits
-    const lo = buf[1]; // 32 bits
-    return hi * 0x100000000 + lo;
-  } catch {
-    // Last-ditch fallback. Not secure; logged loudly.
-    logger.warn('crypto.getRandomValues unavailable, falling back to Math.random', null, 'RadixService');
-    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new TransactionError('Secure random number generation is unavailable');
   }
+  const buf = new Uint32Array(2);
+  globalThis.crypto.getRandomValues(buf);
+  // Combine 21 high bits and 32 low bits to stay below 2^53 - 1.
+  const hi = buf[0] >>> 11;
+  const lo = buf[1];
+  return hi * 0x100000000 + lo;
 };
 
 // ----------------------------------------------------------------------------
@@ -107,6 +102,11 @@ class RadixService {
 
       logger.info('Radix DApp Toolkit ready', null, 'RadixService');
       this.initialized = true;
+
+      // Ensure RDT's connect-button module discovers the hidden
+      // <radix-connect-button> element. The element's connectedCallback()
+      // may have fired before RDT's internal subscription was ready.
+      window.dispatchEvent(new Event('onConnectButtonRender'));
     } catch (error) {
       logger.error('Failed to initialize Radix DApp Toolkit', error, 'RadixService');
       throw new NetworkError('Failed to initialize wallet connection');
@@ -116,21 +116,42 @@ class RadixService {
   async connectWallet(): Promise<{ accounts: { address: string }[] } | null> {
     if (!this.rdt) await this.initialize();
 
-    if (!rateLimiter.check('wallet_connect', { maxRequests: 3, windowMs: 60000, keyPrefix: 'radix' })) {
+    // More generous rate limit while debugging connection issues.
+    if (!rateLimiter.check('wallet_connect', { maxRequests: 10, windowMs: 60000, keyPrefix: 'radix' })) {
       logger.warn('Wallet connection rate limited', null, 'RadixService');
-      return null;
+      throw new TransactionError('Too many connection attempts. Please wait a moment.');
     }
 
     try {
       logger.info('Attempting wallet connection', null, 'RadixService');
-      const { DataRequestBuilder } = await import('@radixdlt/radix-dapp-toolkit');
-      await this.rdt!.walletApi.setRequestData(DataRequestBuilder.accounts().atLeast(1));
-      const result = await this.rdt!.walletApi.sendRequest();
-      logger.info('Wallet connection succeeded', null, 'RadixService');
-      return result;
+
+      // If already connected, return cached data immediately.
+      const cached = this.rdt!.walletApi.getWalletData();
+      if (cached?.accounts && cached.accounts.length > 0) {
+        logger.info('Wallet already connected', null, 'RadixService');
+        return { accounts: cached.accounts as { address: string }[] };
+      }
+
+      // RDT v2 walletApi.sendRequest returns a ResultAsync (neverthrow).
+      // We await it to get the Result, then unwrap the wallet data.
+      const result = await withTimeout(
+        this.rdt!.walletApi.sendRequest(),
+        30000,
+        'Wallet connection timed out',
+      );
+
+      if (result.isOk && typeof result.isOk === 'function' && result.isOk()) {
+        const walletData = result.value;
+        logger.info('Wallet connection succeeded', null, 'RadixService');
+        return { accounts: walletData.accounts as { address: string }[] };
+      }
+
+      const err = (result as { error?: { message?: string } }).error;
+      throw new TransactionError(err?.message ?? 'Wallet connection rejected');
     } catch (error) {
       logger.error('Wallet connection failed', error, 'RadixService');
-      return null;
+      if (error instanceof TransactionError) throw error;
+      throw new TransactionError('Failed to connect wallet');
     }
   }
 
@@ -201,12 +222,10 @@ class RadixService {
 
     const nonce = validateInput(nonceSchema, generateNonce());
 
-    // Defensive sanitization: Radix addresses should only contain alphanumeric
-    // and underscore characters. Anything else could break manifest syntax.
-    const safeAddress = accountAddress.replace(/[^a-zA-Z0-9_]/g, '');
-    if (safeAddress !== accountAddress) {
-      throw new TransactionError('Wallet address contains invalid characters');
-    }
+    // The wallet address has already been validated by walletAddressSchema
+    // (strict Bech32m regex) at the top of this function. We do NOT apply
+    // a generic character whitelist here — domain-specific validation is
+    // safer than regex-based sanitisation for manifest injection defence.
 
     const manifest = `
       CALL_METHOD
@@ -240,12 +259,18 @@ class RadixService {
         version: 1,
       });
 
-      const txHash = (result as { value?: { transactionIntentHash?: string } })?.value?.transactionIntentHash;
-      if (!txHash || typeof txHash !== 'string') {
-        throw new TransactionError('Wallet returned no transaction hash');
+      // RDT v2.x returns a Result monad (neverthrow). Unwrap it safely.
+      if (result.isOk && typeof result.isOk === 'function' && result.isOk()) {
+        const txHash = (result.value as { transactionIntentHash?: string })?.transactionIntentHash;
+        if (!txHash || typeof txHash !== 'string') {
+          throw new TransactionError('Wallet returned no transaction hash');
+        }
+        logger.info('Transaction submitted', { txHash }, 'RadixService');
+        return txHash;
       }
-      logger.info('Transaction submitted', { txHash }, 'RadixService');
-      return txHash;
+
+      const err = (result as { error?: { message?: string } }).error;
+      throw new TransactionError(err?.message ?? 'Transaction was rejected by the wallet');
     } catch (error) {
       logger.error('Transaction submission failed', error, 'RadixService');
       if (error instanceof TransactionError) throw error;

@@ -11,12 +11,25 @@ Object.defineProperty(globalThis, "import", {
         VITE_XRD_RESOURCE_ADDRESS: "resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc",
         VITE_GACHA_PACKAGE_ADDRESS: "package_tdx_2_1phrqqfg3245qqq2pqgpaua5qqqjgqqqqqqqqqqqqqqqqqqqqqqqq",
         VITE_GACHA_COMPONENT_ADDRESS: "component_tdx_2_1cxxxxxxxxxxgachaxxxxxxxxxx006838150368xxxxxxxxxcs2j46",
+        VITE_GACHA_BADGE_RESOURCE: "resource_tdx_2_1nfxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         DEV: true,
         PROD: false,
       },
     },
   },
   writable: true,
+});
+
+// Mock matchMedia for responsive / PWA hooks
+Object.defineProperty(globalThis, "matchMedia", {
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
+  }),
 });
 
 // Mock crypto.getRandomValues for tests

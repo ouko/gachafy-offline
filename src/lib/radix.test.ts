@@ -110,4 +110,21 @@ describe("generateNonce", () => {
     expect(manifest).toContain("25");
     expect(manifest).toContain("u64"); // nonce is present
   }, 15000);
+
+  it("rejects minting when secure randomness is unavailable", async () => {
+    const { radixService } = await import("./radix");
+    const mockSendTransaction = vi.fn();
+    // @ts-expect-error — mocking internal RDT instance
+    radixService.rdt = { walletApi: { sendTransaction: mockSendTransaction } };
+    radixService["initialized"] = true;
+    vi.stubGlobal("crypto", undefined);
+
+    await expect(radixService.mintGachaBadge(
+      "account_tdx_2_129vr3rwyz7gnwf35kkuxvx0fs4hkz0n5hem9utaejqra3sxf0m5wej",
+      "epic",
+      25,
+    )).rejects.toThrow("Secure random number generation is unavailable");
+    expect(mockSendTransaction).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });
