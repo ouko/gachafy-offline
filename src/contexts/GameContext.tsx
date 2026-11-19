@@ -4,7 +4,6 @@ import { logger } from "@/lib/logger";
 interface Streak {
   current: number;
   isTodayDone: boolean;
-  streakMultiplier: number;
 }
 
 interface Booster {
@@ -27,10 +26,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 // is the number of consecutive prior dates (including today if done) ending
 // at today.
 //
-// ⚠️ SECURITY WARNING: Streaks are stored in localStorage and are trivially
-// manipulable by any user via DevTools. If streaks have economic value
-// (multipliers affect real XRD costs), they MUST be validated server-side
-// or on-chain. The client-side streak is a UX nicety, not authoritative state.
+// Streaks are local-only and do not affect XRD prices or on-chain rewards.
 const STREAK_KEY = "gachafi.completedDates.v2";
 const LEGACY_STREAK_KEY = "streakMap";
 
@@ -74,21 +70,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [streak, setStreak] = useState<Streak>({
     current: 0,
     isTodayDone: false,
-    streakMultiplier: 1,
   });
 
   const [booster, setBooster] = useState<Booster>({
     isActive: false,
-    cost: 5,
-    description: "+5 XRD boost",
+    cost: 0,
+    description: "Lucky charm — visual effect only",
   });
 
   const completedDatesRef = useRef<Set<string>>(readCompletedDates());
 
   const updateStreakState = useCallback(() => {
     const { current, isTodayDone } = computeStreak(completedDatesRef.current, new Date());
-    const streakMultiplier = current >= 7 ? 3 : 1;
-    setStreak({ current, isTodayDone, streakMultiplier });
+    setStreak({ current, isTodayDone });
   }, []);
 
   useEffect(() => {

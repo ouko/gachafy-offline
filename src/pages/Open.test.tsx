@@ -37,6 +37,7 @@ const streakState = {
 
 const mockNavigate = vi.fn();
 const mockMintGachaBadge = vi.fn();
+const mockGetTransactionStatus = vi.fn();
 
 // ---------------------------------------------------------------------------
 // Module mocks (hoisted)
@@ -49,7 +50,7 @@ vi.mock("react-router-dom", () => ({
 vi.mock("@/lib/radix-lazy", () => ({
   getRadixService: async () => ({
     mintGachaBadge: (...args: unknown[]) => mockMintGachaBadge(...args),
-    getTransactionStatus: vi.fn(),
+    getTransactionStatus: (...args: unknown[]) => mockGetTransactionStatus(...args),
   }),
 }));
 
@@ -121,6 +122,7 @@ describe("Open page — integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockMintGachaBadge.mockResolvedValue("txhash_abc123");
+    mockGetTransactionStatus.mockResolvedValue("pending");
 
     // Reset mutable state to defaults
     walletState.address = "account_tdx_2_1234567890abcdef";
@@ -167,16 +169,15 @@ describe("Open page — integration", () => {
     });
   });
 
-  it("calls markTodayComplete when mint succeeds and today is not yet done", async () => {
-    const user = userEvent.setup();
+  it("calls markTodayComplete only after the transaction commits successfully", async () => {
+    walletState.pendingTx = "txhash_abc123";
+    mockGetTransactionStatus.mockResolvedValue("success");
     render(<Open />);
-
-    const button = screen.getByRole("button", { name: /Open Epic/ });
-    await user.click(button);
 
     await waitFor(() => {
       expect(streakState.markTodayComplete).toHaveBeenCalled();
     });
+    expect(mockMintGachaBadge).not.toHaveBeenCalled();
   });
 
   it("queues the request when offline", async () => {

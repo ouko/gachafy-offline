@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { GameProvider } from "@/contexts/GameContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
@@ -10,8 +10,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Open from "./pages/Open";
 import Reveal from "./pages/Reveal";
-import Creator from "./pages/Creator";
+import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
+import { BottomNav } from "@/components/BottomNav";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,10 +42,12 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/open" element={<ErrorBoundary><Open /></ErrorBoundary>} />
                   <Route path="/reveal" element={<ErrorBoundary><Reveal /></ErrorBoundary>} />
-                  <Route path="/creator" element={<ErrorBoundary><Creator /></ErrorBoundary>} />
+                  <Route path="/inventory" element={<ErrorBoundary><Inventory /></ErrorBoundary>} />
+                  <Route path="/creator" element={<Navigate to="/inventory" replace />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <BottomNav />
               </BrowserRouter>
             </TooltipProvider>
           </OfflineProvider>

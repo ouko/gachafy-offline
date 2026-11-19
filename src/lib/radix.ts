@@ -18,7 +18,7 @@
 
 import type { RadixDappToolkit } from '@radixdlt/radix-dapp-toolkit';
 import { withRetry, withTimeout, NetworkError, TransactionError } from './errorHandling';
-import { validateInput, walletAddressSchema, balanceSchema, nonceSchema } from './validation';
+import { validateInput, walletAddressSchema, balanceSchema, nonceSchema, txHashSchema } from './validation';
 import { logger } from './logger';
 import { rateLimiter } from './rateLimiter';
 import { GACHA_DEPLOYED } from './featureFlags';
@@ -279,6 +279,7 @@ class RadixService {
   }
 
   async getTransactionStatus(txHash: string): Promise<'success' | 'failed' | 'pending'> {
+    validateInput(txHashSchema, txHash, 'Invalid transaction hash');
     return await withRetry(
       async () => {
         const response = await withTimeout(
@@ -301,54 +302,9 @@ class RadixService {
         return 'pending';
       },
       { maxAttempts: 2, delayMs: 500 },
-    ).catch((error) => {
-      logger.warn('Error checking transaction status', error, 'RadixService');
-      return 'pending' as const;
-    });
+    );
   }
 
-  /**
-   * Query an account's NFT holdings to surface created Capsules.
-   * Returns the raw gateway items; callers filter for the Capsule resource.
-   *
-   * On-chain aggregation of earnings is not implemented yet — see the
-   * Creator dashboard for honest zeros.
-   */
-  async getUserCapsules(walletAddress: string): Promise<unknown[]> {
-    validateInput(walletAddressSchema, walletAddress, 'Invalid wallet address');
-
-    try {
-      const response = await withTimeout(
-        fetch(`${RADIX_CONFIG.gatewayUrl}/state/entity/details`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            addresses: [walletAddress],
-            aggregation_level: 'Vault',
-            opt_ins: {
-              ancestor_identities: false,
-              component_royalty_vault_balance: false,
-              package_royalty_vault_balance: false,
-              non_fungible_include_nfids: true,
-              explicit_metadata: [],
-            },
-          }),
-        }),
-        10000,
-        'getUserCapsules timed out',
-      );
-
-      if (!response.ok) {
-        throw new NetworkError(`Failed to fetch user capsules: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.items ?? [];
-    } catch (error) {
-      logger.error('Error fetching user capsules', error, 'RadixService');
-      return [];
-    }
-  }
 }
 
 export const radixService = new RadixService();

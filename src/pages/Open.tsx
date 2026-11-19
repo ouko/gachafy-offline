@@ -17,22 +17,22 @@ import { TierSelector, tiers, type Tier } from "@/components/TierSelector";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
 import { BoosterControl } from "@/components/BoosterControl";
 import { OpenButton } from "@/components/OpenButton";
-import { X, Clock } from "lucide-react";
+import { GameInfo } from "@/components/GameInfo";
+import { X, Clock, Info } from "lucide-react";
 
-const SWIPE_TRIGGER_DISTANCE_PX = 30;
-const SWIPE_TRIGGER_VELOCITY_PX_MS = 0.4;
 
 const Open = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, queuedRequests, queueMintRequest } = useOffline();
-  const { streakMultiplier, isTodayDone, markTodayComplete } = useStreak();
+  const { streak, isTodayDone, markTodayComplete } = useStreak();
   const {
     isActive: boosterActive,
     cost: boosterCost,
     description: boosterDescription,
     toggleBooster,
   } = useBooster();
+
   const {
     playOpenCapsule,
     playButtonClick,
@@ -54,45 +54,56 @@ const Open = () => {
 
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default Epic
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingStatusError, setPendingStatusError] = useState(false);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
-  const [swipeStartY, setSwipeStartY] = useState(0);
-  const [swipeStartTime, setSwipeStartTime] = useState(0);
 
-  // Poll pending transaction status. Clears optimistic delta on either resolution.
+  // Poll status without resubmitting. Read failures retain the transaction hash.
   useEffect(() => {
     if (!pendingTx) return;
+    let cancelled = false;
 
     const checkTxStatus = async () => {
       try {
         const service = await getRadixService();
         const status = await service.getTransactionStatus(pendingTx);
+        if (cancelled) return;
+        setPendingStatusError(false);
         if (status === "success") {
           clearPendingDelta();
+          if (!isTodayDone) markTodayComplete();
           navigate("/reveal", { state: { tier: selectedTier, txHash: pendingTx } });
           setPendingTx("");
         } else if (status === "failed") {
           toast({
             title: "Transaction Failed",
-            description: "Not enough XRD or the transaction was rejected.",
+            description: "The ledger rejected the transaction. No badge was minted; check the explorer for details.",
             variant: "destructive",
           });
           clearPendingDelta();
           setPendingTx("");
         }
       } catch (error) {
-        logger.error("Error checking transaction status", error, "Open");
+        if (!cancelled) {
+          setPendingStatusError(true);
+          logger.error("Error checking transaction status", error, "Open");
+        }
       }
     };
 
+    void checkTxStatus();
     const interval = setInterval(checkTxStatus, 3000);
-    return () => clearInterval(interval);
-  }, [pendingTx, selectedTier, navigate, toast, clearPendingDelta, setPendingTx]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingTx, selectedTier, isTodayDone, navigate, toast, clearPendingDelta, setPendingTx, markTodayComplete]);
 
-  const totalCost = selectedTier.price + (boosterActive ? boosterCost : 0);
+  const totalCost = selectedTier.price;
   const canAfford = balance >= totalCost;
   const isProcessing = isLoading || !!pendingTx;
 
   const openBox = useCallback(async () => {
+    if (isProcessing) return;
     playButtonClick();
 
     if (!isConnected) {
@@ -151,12 +162,11 @@ const Open = () => {
       const txHash = await service.mintGachaBadge(
         address,
         selectedTier.id,
-        totalCost * streakMultiplier,
+        totalCost,
       );
 
       setPendingTx(txHash);
-
-      if (!isTodayDone) markTodayComplete();
+      setPendingStatusError(false);
 
       toast({
         title: "Transaction Submitted",
@@ -180,8 +190,7 @@ const Open = () => {
     isOnline,
     selectedTier,
     address,
-    streakMultiplier,
-    isTodayDone,
+    isProcessing,
     playButtonClick,
     playError,
     playOpenCapsule,
@@ -190,32 +199,11 @@ const Open = () => {
     queueMintRequest,
     setPendingDelta,
     setPendingTx,
-    markTodayComplete,
     clearPendingDelta,
   ]);
 
-  const handleBalanceSwipeStart = useCallback((e: React.TouchEvent) => {
-    setSwipeStartY(e.touches[0].clientY);
-    setSwipeStartTime(Date.now());
-  }, []);
-
-  const handleBalanceSwipeEnd = useCallback(
-    (e: React.TouchEvent) => {
-      if (!FEATURE_BRIDGE) return;
-      const endY = e.changedTouches[0].clientY;
-      const duration = Date.now() - swipeStartTime;
-      if (duration <= 0) return;
-      const distance = swipeStartY - endY;
-      const velocity = Math.abs(distance) / duration;
-      if (
-        distance > SWIPE_TRIGGER_DISTANCE_PX &&
-        velocity > SWIPE_TRIGGER_VELOCITY_PX_MS
-      ) {
-        setIsBridgeModalOpen(true);
-      }
-    },
-    [swipeStartY, swipeStartTime],
-  );
+  // Bridge swipe gesture removed — it was completely undiscoverable.
+  // When FEATURE_BRIDGE is enabled, a visible button should be used instead.
 
   const handleBridgeSuccess = useCallback(
     (_amount: number, txHash: string) => {
@@ -238,7 +226,7 @@ const Open = () => {
   }, [clearPendingDelta, setPendingTx, toast]);
 
   return (
-    <main className="min-h-screen bg-background p-4 flex flex-col relative">
+    <main className="min-h-screen bg-background p-4 pb-24 flex flex-col relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-2xl"
@@ -271,7 +259,7 @@ const Open = () => {
         balance={balance}
         pendingDelta={pendingDelta}
         pendingTx={pendingTx}
-        streakMultiplier={streakMultiplier}
+        streak={streak}
         isOnline={isOnline}
         queuedRequestsCount={queuedRequests.length}
         isLoading={isBalanceLoading}
@@ -288,12 +276,14 @@ const Open = () => {
           isLoading={false}
         />
 
-        <BoosterControl
-          isActive={boosterActive}
-          cost={boosterCost}
-          description={boosterDescription}
-          onToggle={toggleBooster}
-        />
+        {boosterCost > 0 && (
+          <BoosterControl
+            isActive={boosterActive}
+            cost={boosterCost}
+            description={boosterDescription}
+            onToggle={toggleBooster}
+          />
+        )}
 
         <div className="mt-12 flex justify-center">
           <OpenButton
@@ -312,11 +302,17 @@ const Open = () => {
         </div>
 
         <div className="text-center mt-6 space-y-3 relative z-10">
-          <p className="text-muted-foreground text-base">
-            {!isConnected
-              ? "Connect your Radix wallet to start"
-              : `Tap to ${!isOnline ? "queue" : "open"}`}
-          </p>
+          {!isConnected ? (
+            <p className="text-muted-foreground text-base">
+              Connect your Radix wallet to start opening mystery boxes
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-base">
+              {isOnline
+                ? "Tap the button to open a box and earn SP"
+                : "Tap the button to queue — we'll submit when you're back online"}
+            </p>
+          )}
           {!GACHA_DEPLOYED && isConnected && (
             <p className="text-yellow-400 text-sm">
               Gacha component not yet deployed for this network.
@@ -333,6 +329,11 @@ const Open = () => {
                 <Clock size={16} className="animate-pulse" />
                 <span>Transaction pending — usually takes ~10s</span>
               </div>
+              {pendingStatusError && (
+                <p className="text-sm text-yellow-400" role="status">
+                  Status check temporarily unavailable. Retrying without resubmitting your transaction.
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <a
                   href={getTxExplorerUrl(pendingTx)}
@@ -353,10 +354,14 @@ const Open = () => {
             </div>
           )}
           {isConnected && address && (
-            <p className="text-green-400 text-sm font-mono">
-              Connected: {address.slice(0, 20)}…
+            <p className="text-green-400 text-sm font-mono break-all" title={address}>
+              Connected: {address}
             </p>
           )}
+
+          <div className="pt-4">
+            <GameInfo />
+          </div>
         </div>
       </div>
 

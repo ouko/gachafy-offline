@@ -6,7 +6,6 @@ export const useStreak = () => {
   return {
     streak: streak.current,
     isTodayDone: streak.isTodayDone,
-    streakMultiplier: streak.streakMultiplier,
     markTodayComplete,
   };
 };
