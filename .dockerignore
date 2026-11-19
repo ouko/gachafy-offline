@@ -13,6 +13,10 @@ yarn-error.log*
 .vscode
 .idea
 coverage
+scrypto/gacha/target
+.worktrees
+graphify-out
+.env.*
 *.md
 !README.production.md
 Dockerfile

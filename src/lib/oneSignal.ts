@@ -13,11 +13,19 @@ async function loadOneSignalSdk(): Promise<typeof OneSignal> {
       script.integrity = 'sha384-9WymDdowrrUwJuXZ2joqlQYNQSPWfKsyBecZsqaJgsTur2qmjjrc3YQVGiaFdFdA';
       script.crossOrigin = 'anonymous';
       script.dataset.gachafiOnesignal = 'true';
-      script.onerror = () => reject(new Error('OneSignal SDK failed to load'));
+      script.onerror = () => {
+        script.remove();
+        reject(new Error('OneSignal SDK failed to load'));
+      };
       script.onload = () => {
+        script.dataset.loaded = 'true';
         import('react-onesignal').then((module) => resolve(module.default)).catch(reject);
       };
-      if (!existing) document.head.appendChild(script);
+      if (existing?.dataset.loaded === 'true') {
+        import('react-onesignal').then((module) => resolve(module.default)).catch(reject);
+      } else if (!existing) {
+        document.head.appendChild(script);
+      }
     });
   }
   return sdkPromise;

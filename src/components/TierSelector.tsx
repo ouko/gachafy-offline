@@ -192,7 +192,7 @@ const TierCard = memo(function TierCard({
             )}
           >
             {tier.price}
-            {boosterActive && isSelected ? ` + ${boosterCost}` : ""} XRD
+            {boosterActive && isSelected && boosterCost > 0 ? ` + ${boosterCost}` : ""} XRD
           </p>
         </div>
 

@@ -15,75 +15,79 @@ concurrency:
 
 jobs:
   build:
-    name: Lint, type-check, build
+    name: Lint, test, build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Type check
         run: npm run check
-
       - name: Lint
         run: npm run lint
-
       - name: Test
         run: npm test -- --run
-
       - name: Build
         run: npm run build
         env:
           VITE_ONESIGNAL_APP_ID: ${{ secrets.VITE_ONESIGNAL_APP_ID }}
           VITE_ONESIGNAL_SAFARI_WEB_ID: ${{ secrets.VITE_ONESIGNAL_SAFARI_WEB_ID }}
           VITE_RADIX_NETWORK: ${{ vars.VITE_RADIX_NETWORK || 'stokenet' }}
-          VITE_RADIX_DAPP_DEFINITION: ${{ secrets.VITE_RADIX_DAPP_DEFINITION }}
+          VITE_RADIX_DAPP_DEFINITION: ${{ vars.VITE_RADIX_DAPP_DEFINITION }}
           VITE_RADIX_GATEWAY_URL: ${{ vars.VITE_RADIX_GATEWAY_URL }}
           VITE_GACHA_PACKAGE_ADDRESS: ${{ vars.VITE_GACHA_PACKAGE_ADDRESS }}
           VITE_GACHA_COMPONENT_ADDRESS: ${{ vars.VITE_GACHA_COMPONENT_ADDRESS }}
+          VITE_GACHA_BADGE_RESOURCE: ${{ vars.VITE_GACHA_BADGE_RESOURCE }}
           VITE_XRD_RESOURCE_ADDRESS: ${{ vars.VITE_XRD_RESOURCE_ADDRESS }}
-          VITE_FEATURE_BRIDGE: ${{ vars.VITE_FEATURE_BRIDGE || 'false' }}
           VITE_FEATURE_OFFLINE_QUEUE: ${{ vars.VITE_FEATURE_OFFLINE_QUEUE || 'false' }}
-          VITE_FEATURE_CREATOR_DASHBOARD: ${{ vars.VITE_FEATURE_CREATOR_DASHBOARD || 'true' }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-
+          VITE_APP_NAME: GachaFi
+          VITE_APP_VERSION: ${{ github.sha }}
       - name: Check bundle size
         run: npm run check:bundle
-
-      - name: Upload build artefact
+      - name: Upload build artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist
           path: dist
           retention-days: 7
+
+  contract:
+    name: Scrypto tests and release build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Test contract
+        run: cargo test --manifest-path scrypto/gacha/Cargo.toml
+      - name: Build release Wasm
+        run: cargo build --manifest-path scrypto/gacha/Cargo.toml --target wasm32-unknown-unknown --release
 
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
-      - name: npm audit (high+)
+      - name: npm audit
         run: npm audit --audit-level=high
 
   secrets:
@@ -91,12 +95,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-
       - name: Secret scan with TruffleHog
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@d232362a64a09a9e7d58267b8f5acef00ae90e23
         with:
           path: ./
           base: main

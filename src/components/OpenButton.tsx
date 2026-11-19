@@ -3,12 +3,14 @@ import { cn } from "@/lib/utils";
 import { Sparkles, ExternalLink, Wallet } from "lucide-react";
 import { memo } from "react";
 import { isStandalone } from "@/utils/pwa";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface OpenButtonProps {
   isConnected: boolean;
   canAfford: boolean;
   isProcessing: boolean;
   isOnline: boolean;
+  offlineQueueEnabled: boolean;
   gachaDeployed: boolean;
   selectedTierName: string;
   totalCost: number;
@@ -23,6 +25,7 @@ export const OpenButton = memo(function OpenButton({
   canAfford,
   isProcessing,
   isOnline,
+  offlineQueueEnabled,
   gachaDeployed,
   selectedTierName,
   totalCost,
@@ -31,10 +34,12 @@ export const OpenButton = memo(function OpenButton({
   onClick,
   onMouseEnter,
 }: OpenButtonProps) {
+  const isMobile = useIsMobile();
+
   if (!isConnected) {
-    // In standalone PWA mode, browser extensions (including Radix Wallet
-    // extension) cannot inject content scripts. Show a helpful fallback.
-    if (isStandalone()) {
+    // Desktop PWAs cannot use browser extensions, but mobile PWAs can
+    // deep-link to the Radix Wallet app. Only block desktop standalone.
+    if (isStandalone() && !isMobile) {
       return (
         <div className="flex flex-col items-center gap-4 max-w-xs text-center">
           <div className="rounded-2xl bg-muted/50 border border-border p-6 flex flex-col items-center gap-3">
@@ -77,7 +82,7 @@ export const OpenButton = memo(function OpenButton({
         "holographic-button min-w-[280px] h-20 text-xl font-bold rounded-3xl transition-all duration-500 border-2 border-white/30 backdrop-blur-sm tracking-wider",
         !canAfford && "opacity-50 cursor-not-allowed grayscale",
       )}
-      disabled={isProcessing || !canAfford || !gachaDeployed}
+      disabled={isProcessing || !canAfford || !gachaDeployed || (!isOnline && !offlineQueueEnabled)}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
     >
@@ -92,6 +97,8 @@ export const OpenButton = memo(function OpenButton({
         <span className="tracking-wider">Coming Soon</span>
       ) : !canAfford ? (
         <span className="tracking-wider">Need {(totalCost - balance).toFixed(3)} XRD</span>
+      ) : !isOnline && !offlineQueueEnabled ? (
+        <span className="tracking-wider">Reconnect to Open</span>
       ) : !isOnline ? (
         <div className="flex items-center gap-3">
           <Sparkles size={20} className="animate-pulse" />

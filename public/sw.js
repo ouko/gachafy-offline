@@ -2,7 +2,7 @@
 // offline mint queue when connectivity returns. There is intentionally NO
 // `/api/mint` mock here: minting requires the user's wallet, which is only
 // available online from the page itself.
-const CACHE_NAME = 'gachafi-shell-v5';
+const CACHE_NAME = 'gachafi-shell-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -32,7 +32,7 @@ button:hover{background:rgba(255,255,255,0.1)}
 <body>
 <div class="logo">🎲</div>
 <h1>You're offline</h1>
-<p>GachaFi needs an internet connection to interact with the Radix blockchain. Your queued requests will retry automatically when you're back online.</p>
+<p>GachaFi needs an internet connection for wallet and blockchain features. Reconnect, then retry. No transaction is submitted while offline.</p>
 <button onclick="location.reload()">Retry</button>
 </body>
 </html>`;

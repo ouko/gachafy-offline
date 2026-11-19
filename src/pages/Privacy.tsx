@@ -38,25 +38,40 @@ export default function Privacy() {
   };
 
   const exportData = async () => {
-    const contents = await exportLocalData();
-    const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `gachafi-data-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setMessage('Your local GachaFi data was exported.');
+    try {
+      const contents = await exportLocalData();
+      const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `gachafi-data-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMessage('Your local GachaFi data was exported.');
+    } catch {
+      setMessage('Local data could not be exported. Check browser storage permissions and try again.');
+    }
   };
 
   const deleteData = async () => {
     if (!window.confirm('Delete GachaFi streaks, consent choices, and queued requests from this device? Blockchain records cannot be deleted.')) return;
     setIsDeleting(true);
     try {
-      if (notifications) await oneSignalService.optOut();
+      let optOutFailed = false;
+      if (notifications) {
+        try {
+          await oneSignalService.optOut();
+        } catch {
+          optOutFailed = true;
+        }
+      }
       await clearLocalData();
       setNotifications(false);
       setErrorReporting(false);
-      setMessage('Local GachaFi data was deleted. Public blockchain records remain unchanged.');
+      setMessage(optOutFailed
+        ? 'Local GachaFi data was deleted, but OneSignal opt-out failed. Use browser notification settings to complete withdrawal. Blockchain records remain unchanged.'
+        : 'Local GachaFi data was deleted. Public blockchain records remain unchanged.');
+    } catch {
+      setMessage('Local data could not be fully deleted. Check browser storage permissions and try again.');
     } finally {
       setIsDeleting(false);
     }

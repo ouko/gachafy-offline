@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { parseXrdAmount, shortenTxHash, RADIX_CONFIG } from "./radix-config";
 
 vi.mock("./featureFlags", () => ({
-  FEATURE_BRIDGE: false,
   FEATURE_OFFLINE_QUEUE: false,
   FEATURE_CREATOR_DASHBOARD: true,
   GACHA_DEPLOYED: true,

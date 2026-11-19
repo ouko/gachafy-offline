@@ -75,8 +75,8 @@ export interface GachaBadge {
   id: string;
   resourceAddress: string;
   name: string;
-  tier: 'common' | 'rare' | 'epic';
-  rarity: 'common' | 'rare' | 'epic';
+  tier: string;
+  rarity: string;
   sp: number;
   nonce: number;
   mintedAtEpoch: number;
@@ -139,9 +139,9 @@ function readSafeInteger(root: SborValue, name: string, fallback = 0): number {
   return value;
 }
 
-function parseTier(value: string): 'common' | 'rare' | 'epic' {
-  if (value === 'common' || value === 'rare' || value === 'epic') return value;
-  throw new NetworkError(`Unsupported badge tier: ${value}`);
+function parseTier(value: string): string {
+  if (value.length > 0 && value.length <= 32) return value;
+  throw new NetworkError('Badge tier must contain 1-32 characters');
 }
 
 function parseBadge(

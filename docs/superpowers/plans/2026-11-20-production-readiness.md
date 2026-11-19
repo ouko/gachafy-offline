@@ -113,7 +113,7 @@ Add separate tests proving overpayment fails, paused minting fails, a zero-suppl
 Run:
 
 ```bash
-PATH="$HOME/.cargo/bin:$PATH" CXXFLAGS="-isysroot $(xcrun --show-sdk-path)" cargo test
+PATH="$HOME/.cargo/bin:$PATH" CC_wasm32_unknown_unknown=/usr/local/opt/llvm/bin/clang CXXFLAGS="-isysroot $(xcrun --show-sdk-path)" cargo test
 ```
 
 Expected: FAIL to compile because the new read methods do not exist. If the SDK flag is unnecessary on the repaired host, rerun without it and use the successful form in documentation.
@@ -350,7 +350,7 @@ npm test -- --run
 npm run build
 npm run check:bundle
 npm audit --audit-level=high
-PATH="$HOME/.cargo/bin:$PATH" CXXFLAGS="-isysroot $(xcrun --show-sdk-path)" cargo test --manifest-path scrypto/gacha/Cargo.toml
+PATH="$HOME/.cargo/bin:$PATH" CC_wasm32_unknown_unknown=/usr/local/opt/llvm/bin/clang CXXFLAGS="-isysroot $(xcrun --show-sdk-path)" cargo test --manifest-path scrypto/gacha/Cargo.toml
 PATH="$HOME/.cargo/bin:$PATH" cargo build --manifest-path scrypto/gacha/Cargo.toml --target wasm32-unknown-unknown --release
 git diff --check
 ```

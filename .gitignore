@@ -31,3 +31,11 @@ dist-ssr
 .env.production
 !.env.example
 target/
+graphify-out/
+.worktrees/
+
+# Local Scrypto deployment scratch files
+scrypto/gacha/debug_manifest.rtm
+scrypto/gacha/instantiate.html
+scrypto/gacha/instantiate_manifest*.rtm
+scrypto/gacha/instantiate_qr*.png

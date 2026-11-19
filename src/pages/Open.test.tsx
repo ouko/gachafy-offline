@@ -31,7 +31,6 @@ const offlineState = {
 const streakState = {
   streak: 0,
   isTodayDone: false,
-  streakMultiplier: 1,
   markTodayComplete: vi.fn(),
 };
 
@@ -64,7 +63,7 @@ vi.mock("@/lib/featureFlags", async () => {
   return {
     ...actual,
     GACHA_DEPLOYED: true,
-    FEATURE_BRIDGE: false,
+    FEATURE_OFFLINE_QUEUE: true,
   };
 });
 
@@ -133,7 +132,6 @@ describe("Open page — integration", () => {
     walletState.pendingTx = "";
     offlineState.isOnline = true;
     offlineState.queuedRequests = [];
-    streakState.streakMultiplier = 1;
     streakState.isTodayDone = false;
   });
 

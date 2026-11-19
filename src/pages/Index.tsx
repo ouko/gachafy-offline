@@ -16,7 +16,7 @@ const Index = () => {
     // Pressing back from /open will exit the app instead of looping here.
     const timer = setTimeout(() => {
       navigate('/open', { replace: true });
-    }, 2500);
+    }, 6000);
 
     return () => clearTimeout(timer);
   }, [navigate]);

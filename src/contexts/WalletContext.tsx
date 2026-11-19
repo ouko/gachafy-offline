@@ -30,6 +30,7 @@ interface Wallet {
   isConnected: boolean;
   isLoading: boolean;
   isBalanceLoading: boolean;
+  hasBalanceError: boolean;
   pendingTx: string;
 }
 
@@ -51,6 +52,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     isConnected: false,
     isLoading: false,
     isBalanceLoading: false,
+    hasBalanceError: false,
     pendingTx: "",
   });
 
@@ -76,7 +78,10 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             ...prev,
             address,
             isConnected: !!address,
+            balance: address === prev.address ? prev.balance : 0,
             pendingDelta: address === prev.address ? prev.pendingDelta : 0,
+            pendingTx: address === prev.address ? prev.pendingTx : "",
+            hasBalanceError: address === prev.address ? prev.hasBalanceError : false,
           }));
         } catch (e) {
           logger.warn("Failed parsing wallet data", e, "WalletContext");
@@ -107,10 +112,10 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const live = await service.getBalance(wallet.address);
         // Guard against state updates after unmount or address change
         if (cancelled) return;
-        setWallet((prev) => ({ ...prev, balance: live, isBalanceLoading: false }));
+        setWallet((prev) => ({ ...prev, balance: live, isBalanceLoading: false, hasBalanceError: false }));
       } catch (error) {
         if (cancelled) return;
-        setWallet((prev) => ({ ...prev, isBalanceLoading: false }));
+        setWallet((prev) => ({ ...prev, isBalanceLoading: false, hasBalanceError: true }));
         logger.error("Error fetching balance", error, "WalletContext");
       }
     };

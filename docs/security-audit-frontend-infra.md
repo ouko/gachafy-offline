@@ -1,5 +1,7 @@
 # GachaFi Security Audit — Frontend & Infrastructure
 
+> **Historical review.** Current source uses supported Vite 7, zero reported npm-audit vulnerabilities at the November 2026 review, consent-gated Sentry/OneSignal, non-root nginx on 8080, location-safe security headers, and pinned CI actions. COOP/COEP are intentionally not enabled. See `COMPREHENSIVE_SECURITY_PRIVACY_AUDIT.md` for current status.
+
 **Date:** 2026-05-06  
 **Auditor:** Senior Security Engineer  
 **Scope:** React 18 frontend, PWA shell (service worker, manifest), deployment configs (Docker, nginx, Netlify), CI/CD pipeline, and supply chain.  

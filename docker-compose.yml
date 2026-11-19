@@ -10,18 +10,35 @@ services:
         VITE_RADIX_GATEWAY_URL: ${VITE_RADIX_GATEWAY_URL:-}
         VITE_GACHA_PACKAGE_ADDRESS: ${VITE_GACHA_PACKAGE_ADDRESS:-}
         VITE_GACHA_COMPONENT_ADDRESS: ${VITE_GACHA_COMPONENT_ADDRESS:-}
+        VITE_GACHA_BADGE_RESOURCE: ${VITE_GACHA_BADGE_RESOURCE:-}
         VITE_XRD_RESOURCE_ADDRESS: ${VITE_XRD_RESOURCE_ADDRESS:-}
-        VITE_FEATURE_BRIDGE: ${VITE_FEATURE_BRIDGE:-false}
         VITE_FEATURE_OFFLINE_QUEUE: ${VITE_FEATURE_OFFLINE_QUEUE:-false}
-        VITE_FEATURE_CREATOR_DASHBOARD: ${VITE_FEATURE_CREATOR_DASHBOARD:-true}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
         VITE_APP_NAME: ${VITE_APP_NAME:-GachaFi}
         VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
     ports:
-      - "3000:80"
+      - "3000:8080"
     restart: unless-stopped
+    # Resource limits to prevent a compromised container from consuming all
+    # host resources.
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    # Capability dropping: this container only serves static files over HTTP;
+    # it doesn't need any special Linux capabilities.
+    cap_drop:
+      - ALL
+    # Prevent privilege escalation in case a process inside the container
+    # is compromised.
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3

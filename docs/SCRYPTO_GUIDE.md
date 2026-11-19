@@ -1,226 +1,155 @@
-# Scrypto Smart Contract Guide
+# Scrypto Contract Guide
 
-Everything you need to build, test, deploy, and interact with the `GachaMinter` contract.
+**Blueprint:** `GachaMinter`
+**Scrypto:** 1.3.1
+**Location:** `scrypto/gacha`
 
-> **Scrypto version:** 1.3.1  
-> **Network:** Babylon (Radix DLT)  
-> **Blueprint:** `GachaMinter`
+## Contract behavior
 
----
+The contract is a fixed-price badge minter:
 
-## 1. What the Contract Does
+| Tier | Exact XRD payment | SP |
+|---|---:|---:|
+| common | 8 | 100 |
+| rare | 15 | 350 |
+| epic | 25 | 1000 |
 
-`GachaMinter` is a pay-to-mint badge factory:
+Each badge stores its name, tier, rarity, SP, nonce, mint epoch, image URL, and description. The `BadgeMinted` event includes tier, rarity, SP, nonce, badge ID, and immutable transaction hash. It does not contain a spoofable recipient string.
 
-1. User sends XRD payment
-2. Contract verifies payment ≥ tier price
-3. Contract mints a soulbound NFT badge (non-burnable)
-4. Contract emits a `BadgeMinted` event for off-chain indexing
-5. Admin can withdraw XRD, update tiers, or pause minting
+Underpayment and overpayment abort. Admin methods validate a non-empty proof of the admin badge through one shared helper. Minting supports pause and a maximum-supply cap; withdrawals support an optional per-epoch limit.
 
-### Key Properties
+Badges are non-burnable by resource rule but transferable, not soulbound. The component has `OwnerRole::None` and cannot be upgraded. The badge resource owner role is admin-updatable for recovery; operators must protect the admin badge accordingly.
 
-| Feature | Implementation |
-|---------|---------------|
-| **Soulbound** | `burn_roles: deny_all` — badges can never be destroyed |
-| **Pause switch** | `enabled: bool` — admin can freeze minting instantly |
-| **Payment validation** | `assert!(payment.amount() >= config.price)` — prevents underpay |
-| **Admin control** | Single admin badge (supply = 2), required for all privileged ops |
-| **Events** | `BadgeMinted`, `TierUpdated`, `XrdWithdrawn`, `EnabledChanged` |
+## Build and test
 
----
-
-## 2. Prerequisites
+Install Rust, the Wasm target, and Scrypto tooling compatible with 1.3.1:
 
 ```bash
-# Install Rust (if not already installed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Add WebAssembly target (required for Scrypto)
 rustup target add wasm32-unknown-unknown
-
-# Install the Scrypto toolchain
-cargo install scrypto-cli
-
-# Verify
-cargo check --version
-```
-
----
-
-## 3. Build & Test
-
-```bash
 cd scrypto/gacha
+cargo test
+scrypto build
+```
 
-# Type check
-cargo check
+`scrypto build` produces the Wasm and package-definition artifacts for deployment. A plain Cargo release build is also checked in CI:
 
-# Build WASM (for deployment)
+```bash
 cargo build --target wasm32-unknown-unknown --release
-
-# The compiled artifacts land in:
-# target/wasm32-unknown-unknown/release/gacha.wasm
-# target/wasm32-unknown-unknown/release/gacha.rpd
 ```
 
----
-
-## 4. Deploy (Stokenet)
-
-### 4.1 Get XRD for gas
-
-You need stokenet XRD to pay transaction fees:
-- [Stokenet Faucet](https://stokenet-faucet.radixdlt.com/)
-- Or use the Radix Wallet's built-in faucet
-
-### 4.2 Deploy the package
-
-Use the [Radix Dashboard](https://stokenet-dashboard.radixdlt.com/) or `resim` / `scrypto` CLI:
+On macOS, if native dependencies cannot find C++ headers:
 
 ```bash
-# Using the Radix Developer Console (recommended for beginners):
-# 1. Go to https://stokenet-dashboard.radixdlt.com/
-# 2. Connect your wallet
-# 3. Developer Console → Deploy Package
-# 4. Upload gacha.wasm + gacha.rpd
-# 5. Sign the transaction
-# 6. Copy the Package Address
+SDK="$(xcrun --show-sdk-path)"
+CC_wasm32_unknown_unknown=/usr/local/opt/llvm/bin/clang \
+CXXFLAGS="-isysroot $SDK -I$SDK/usr/include/c++/v1" cargo test
 ```
 
-### 4.3 Instantiate the component
+## Deploy to Stokenet
 
-After deploying the package, you need to call `instantiate_gacha_minter` to create an actual component:
+1. Build with `scrypto build`.
+2. Use the Stokenet developer console to publish the Wasm and package definition.
+3. Call the package function:
+
+```text
+GachaMinter::instantiate_gacha_minter(<network XRD resource address>)
+```
+
+4. Deposit the returned admin badge into the operator account.
+5. Record the package address, component address, admin badge address, and badge resource address.
+6. Verify `get_badge_resource_address` and `get_total_minted` against Gateway/component state.
+
+Configure the frontend with all three public GachaFi addresses:
 
 ```bash
-# Using the publish_manifest.rtm as a template
-cat scrypto/gacha/publish_manifest.rtm
+VITE_GACHA_PACKAGE_ADDRESS=package_tdx_2_...
+VITE_GACHA_COMPONENT_ADDRESS=component_tdx_2_...
+VITE_GACHA_BADGE_RESOURCE=resource_tdx_2_...
 ```
 
-The manifest should:
-1. Call `GachaMinter::instantiate_gacha_minter(xrd_address)`
-2. Deposit the returned admin badge into your account
-3. Deposit the returned component badge (if any)
+Rebuild after changing addresses. The current NFT schema requires a new package/component; never reuse an older deployment for this release.
 
-**What you get back:**
-- `Global<GachaMinter>` → **Component Address** (save this!)
-- `FungibleBucket` → **Admin Badge** (save this! You need it to withdraw funds)
+## Mint manifest
 
-### 4.4 Update your frontend `.env`
+The frontend constructs the equivalent of:
 
-```bash
-VITE_GACHA_PACKAGE_ADDRESS=package_tdx_2_1...
-VITE_GACHA_COMPONENT_ADDRESS=component_tdx_2_1...
-```
-
-Rebuild the frontend:
-```bash
-npm run build
-```
-
----
-
-## 5. Admin Operations
-
-All admin operations require the **admin badge** returned at instantiation.
-
-### 5.1 Withdraw XRD
-
-```rust
-// Manifest snippet
+```text
 CALL_METHOD
-  Address("<YOUR_ACCOUNT>")
-  "create_proof_of_amount"
-  Address("<ADMIN_BADGE_ADDRESS>")
-  Decimal("1");
-
+  Address("<USER_ACCOUNT>")
+  "withdraw"
+  Address("<XRD_RESOURCE>")
+  Decimal("8");
+TAKE_FROM_WORKTOP
+  Address("<XRD_RESOURCE>")
+  Decimal("8")
+  Bucket("payment");
 CALL_METHOD
-  Address("<GACHA_COMPONENT_ADDRESS>")
-  "withdraw_xrd"
-  Decimal("100")
-  Proof("admin_badge_proof");
-
+  Address("<GACHA_COMPONENT>")
+  "mint_gacha_badge"
+  Bucket("payment")
+  "common"
+  <SECURE_NONCE>u64;
 CALL_METHOD
-  Address("<YOUR_ACCOUNT>")
+  Address("<USER_ACCOUNT>")
   "deposit_batch"
   Expression("ENTIRE_WORKTOP");
 ```
 
-### 5.2 Update a tier
+The frontend then resolves the mint event through the Gateway and reads the badge NFT. It does not infer the result from the selected tier.
 
-```rust
+## Admin manifests
+
+Create a proof from the operator account and move it from the auth zone into a named proof before the admin call:
+
+```text
 CALL_METHOD
-  Address("<GACHA_COMPONENT_ADDRESS>")
-  "update_tier"
-  "epic"
-  Decimal("30")
-  1200u64
-  "epic"
-  Proof("admin_badge_proof");
-```
-
-### 5.3 Pause / resume minting
-
-```rust
+  Address("<OPERATOR_ACCOUNT>")
+  "create_proof_of_amount"
+  Address("<ADMIN_BADGE_RESOURCE>")
+  Decimal("1");
+POP_FROM_AUTH_ZONE
+  Proof("admin_proof");
 CALL_METHOD
-  Address("<GACHA_COMPONENT_ADDRESS>")
+  Address("<GACHA_COMPONENT>")
   "set_enabled"
   false
-  Proof("admin_badge_proof");
+  Proof("admin_proof");
 ```
 
----
+For withdrawal:
 
-## 6. Event Indexing
+```text
+CALL_METHOD
+  Address("<OPERATOR_ACCOUNT>")
+  "create_proof_of_amount"
+  Address("<ADMIN_BADGE_RESOURCE>")
+  Decimal("1");
+POP_FROM_AUTH_ZONE
+  Proof("admin_proof");
+CALL_METHOD
+  Address("<GACHA_COMPONENT>")
+  "withdraw_xrd"
+  Decimal("1")
+  Proof("admin_proof");
+CALL_METHOD
+  Address("<OPERATOR_ACCOUNT>")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP");
+```
 
-The contract emits these events for every state change:
+`set_max_supply` accepts `Option<u64>`; `set_withdrawal_limit` accepts `Option<Decimal>` and rejects zero/negative limits. Tier updates/additions require positive price and SP plus non-empty labels.
 
-| Event | When | Fields |
-|-------|------|--------|
-| `BadgeMinted` | Every successful mint | `tier`, `rarity`, `sp`, `nonce`, `badge_id`, `recipient` |
-| `TierUpdated` | Admin updates or adds a tier | `tier`, `price`, `sp`, `rarity`, `action` ("updated" / "added") |
-| `XrdWithdrawn` | Admin withdraws XRD | `amount`, `remaining` |
-| `EnabledChanged` | Admin toggles pause | `enabled` |
+## Events and reads
 
-Subscribe via the [Radix Gateway API](https://docs.radixdlt.com/docs/gateway-api) using the component address as the emitter filter.
+The frontend uses `BadgeMinted` for transaction-to-badge resolution. Collection reads current account vault IDs and NFT data with pagination. Global mint count comes from component `mint_counter - 1`; no player leaderboard or creator earnings are derived.
 
----
+## Mainnet checklist
 
-## 7. Contract Upgrade Policy
-
-**This contract is immutable.** Once deployed, the code cannot be changed.  
-If you need to fix a bug or add a feature, you must:
-
-1. Deploy a new package
-2. Instantiate a new component
-3. Update `VITE_GACHA_PACKAGE_ADDRESS` and `VITE_GACHA_COMPONENT_ADDRESS` in the frontend
-4. (Optional) Pause the old component to prevent further mints
-
-Plan accordingly: test thoroughly on stokenet before mainnet deployment.
-
----
-
-## 8. Security Checklist Before Mainnet
-
-- [ ] Deployed and tested on stokenet
-- [ ] Admin badge stored in a secure wallet (hardware wallet preferred)
-- [ ] dApp definition registered with correct origin
-- [ ] Events verified via Gateway API
-- [ ] Pause switch tested (can freeze minting)
-- [ ] Tier prices validated (no zero-price tiers)
-- [ ] Frontend uses the exact mainnet addresses
-- [ ] `npm audit` clean
-- [ ] SRI hashes match current CDN scripts
-
----
-
-## 9. File Reference
-
-| File | Purpose |
-|------|---------|
-| `scrypto/gacha/src/lib.rs` | Contract source code |
-| `scrypto/gacha/Cargo.toml` | Rust dependencies |
-| `scrypto/gacha/tests/lib.rs` | Unit tests |
-| `scrypto/gacha/publish_manifest.rtm` | Example deployment manifest |
-| `src/lib/radix.ts` | Frontend service that calls the contract |
-| `src/lib/radix-config.ts` | Contract addresses & network config |
+- [ ] Current tests, release build, and independent security review pass.
+- [ ] Stokenet exact payments and rejected over/underpayments verified.
+- [ ] NFT metadata and `BadgeMinted` resolution verified on the actual frontend.
+- [ ] Pause, supply cap, invalid proofs, withdrawal limits, and withdrawal tested.
+- [ ] Admin badge storage and backup reviewed.
+- [ ] dApp definition and badge resource metadata reference the production origin/assets.
+- [ ] New Mainnet package/component/resource addresses independently reviewed.
+- [ ] Old component paused and migration communicated when replacing a deployment.

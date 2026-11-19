@@ -1,5 +1,7 @@
 # GachaFi Scrypto Smart Contract Security Audit
 
+> **Historical review.** The May 2026 findings refer to an older contract. The current source removes recipient spoofing, requires exact payment, centralizes admin-proof checks, validates withdrawal limits, adds NFT display metadata/read methods, and expands tests. A fresh independent audit is still required before Mainnet.
+
 **Auditor:** Blockchain Security Auditor (Radix DLT / Scrypto Specialist)  
 **Contract:** `GachaMinter` Blueprint  
 **Source:** `/Users/lukeouko/gachafy-offline/scrypto/gacha/src/lib.rs`  

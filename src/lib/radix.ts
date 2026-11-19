@@ -194,10 +194,7 @@ class RadixService {
         return validateInput(balanceSchema, balance, 'Invalid balance received');
       },
       { maxAttempts: 3, delayMs: 1000 },
-    ).catch((error) => {
-      logger.error('Error fetching balance', error, 'RadixService');
-      return 0;
-    });
+    );
   }
 
   async mintGachaBadge(accountAddress: string, tier: string, amount: number): Promise<string> {

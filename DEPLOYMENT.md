@@ -1,114 +1,64 @@
-# Quick Deployment Guide
+# Deployment
 
-## Prerequisites
-1. Node.js 18+ installed
-2. Environment variables configured
+## 1. Prepare the current contract
 
-## Quick Start (5 minutes)
+The NFT schema and payment checks changed in this release. Build, test, and deploy a new Scrypto package/component using [docs/SCRYPTO_GUIDE.md](docs/SCRYPTO_GUIDE.md). Existing components are immutable and cannot be upgraded in place.
 
-### 1. Clone & Setup
+Record the package, component, and badge resource addresses. Configure the dApp definition for the same network and production origin.
+
+## 2. Configure the build
+
+Use Node.js 20.19+ or 22+ and npm. Set:
+
 ```bash
-git clone <your-repo>
-cd gachafi
-npm install
-cp .env.example .env
-# Edit .env with your credentials
+VITE_RADIX_NETWORK=stokenet
+VITE_RADIX_DAPP_DEFINITION=account_...
+VITE_GACHA_PACKAGE_ADDRESS=package_...
+VITE_GACHA_COMPONENT_ADDRESS=component_...
+VITE_GACHA_BADGE_RESOURCE=resource_...
 ```
 
-### 2. Deploy to Vercel (Easiest)
-```bash
-npm i -g vercel
-vercel
-```
-Then add environment variables in Vercel dashboard.
+Optional Sentry and OneSignal values enable integrations only after user consent. All `VITE_` variables are public. Local `.env` files are intentionally ignored.
 
-### 3. Deploy to Netlify
-```bash
-npm i -g netlify-cli
-netlify deploy --prod
-```
+Verify before deployment:
 
-### 4. Deploy with Docker
 ```bash
-docker-compose up -d
+npm ci
+npm run check
+npm test -- --run
+npm run build
+npm run check:bundle
+npm audit --audit-level=high
 ```
 
-## Environment Variables Needed
+## 3. Choose a host
 
-**Required:**
-- `VITE_GACHA_PACKAGE_ADDRESS` - Your deployed Scrypto package address
-- `VITE_GACHA_COMPONENT_ADDRESS` - Your deployed component address
+### Docker
 
-**Optional:**
-- `VITE_ONESIGNAL_APP_ID` - For push notifications
-- `VITE_RADIX_NETWORK` - Default: stokenet
-- `VITE_RADIX_DAPP_DEFINITION` - Your dApp address
+```bash
+docker compose up --build -d
+curl --fail http://localhost:3000/health
+```
 
-## Platform-Specific Instructions
-
-### Vercel
-1. Import GitHub repo at vercel.com
-2. Add environment variables
-3. Deploy
+The container listens on 8080; Compose maps it to 3000. Add HTTPS through a reverse proxy. If using a custom Gateway origin, add it to the CSP in `security-headers.conf` before building.
 
 ### Netlify
-1. Import GitHub repo at netlify.com
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Add environment variables
-5. Deploy
 
-### AWS Amplify
-1. Connect GitHub repo
-2. Build settings: Detected automatically
-3. Add environment variables
-4. Deploy
+Import the repository and set the environment variables before deploying. `netlify.toml` uses Node 22, runs typecheck/tests/build, publishes `dist`, applies security headers, and handles SPA deep links.
 
-### Cloudflare Pages
-1. Connect GitHub repo
-2. Build command: `npm run build`
-3. Build output: `dist`
-4. Add environment variables
-5. Deploy
+### Other static hosts
 
-### Railway
-1. Connect GitHub repo
-2. Add environment variables
-3. Deploy (automatic)
+Build with `npm run build` and publish `dist`. Configure unknown route rewrites to `/index.html`, HTTPS, and security headers equivalent to `netlify.toml`. Keep service-worker files uncached. Platform support is configuration-based; this repository does not deploy to Vercel, Cloudflare, AWS, or another provider automatically.
 
-### Render
-1. New Static Site
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Add environment variables
-5. Deploy
+## 4. Verify the release
 
-## Post-Deployment Checklist
+- Open `/open`, `/inventory`, `/privacy`, and a direct deep link.
+- Connect and disconnect a Stokenet wallet; change accounts and verify Collection refreshes.
+- Submit a test mint once and confirm the exact NFT on Reveal and in Collection.
+- Test wallet rejection, committed failure, delayed indexing, and Gateway retry without duplicate signing.
+- Confirm global mint count and account SP match chain data.
+- Test consent, push opt-in/out, local export, and deletion.
+- Test mobile Safari/Chrome and PWA upgrade behavior.
+- Check production headers and ensure no source maps or secrets are published.
 
-- [ ] Test wallet connection
-- [ ] Test gacha opening
-- [ ] Test offline functionality
-- [ ] Verify push notifications (if enabled)
-- [ ] Check all routes load correctly
-- [ ] Test on mobile devices
-- [ ] Review error logs
-- [ ] Set up monitoring
-
-## Troubleshooting
-
-**Build fails:**
-- Ensure all environment variables are set
-- Check Node.js version is 18+
-
-**Blank page:**
-- Check browser console for errors
-- Verify environment variables are correct
-- Verify the Scrypto contract is deployed on the chosen network
-
-**Can't connect wallet:**
-- Ensure Radix Connector extension is installed
-- Verify dApp definition address is correct
-
-## Support
-
-See `README.production.md` for detailed documentation.
+See [README.production.md](README.production.md) for the full Mainnet launch checklist. A successful build alone is not proof of a deployed or audited production system.

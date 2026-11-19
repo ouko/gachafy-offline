@@ -1,5 +1,7 @@
 # gachafy-offline — MVP hardening pass
 
+> **Historical review.** This describes the May 2026 snapshot. The Creator dashboard has since been replaced by chain-backed Collection, Reveal reads actual NFTs, exact payment is enforced, and privacy controls were added. Use `README.md` and `docs/COMPREHENSIVE_SECURITY_PRIVACY_AUDIT.md` for current reality.
+
 **Date:** 2026-05-05
 **Status:** Production-ready *infrastructure*; one external dependency (the Scrypto component deployment) still required before the mint flow goes live.
 **Verification:** `tsc --noEmit` clean, `eslint .` clean (0 errors, 40 boundary-`any` warnings).

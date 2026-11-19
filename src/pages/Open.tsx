@@ -7,12 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/hooks/useWallet";
 import { getRadixService } from "@/lib/radix-lazy";
 import { getTxExplorerUrl, shortenTxHash } from "@/lib/radix-config";
-import { BridgeModal } from "@/components/BridgeModal";
 import { useBooster } from "@/hooks/useBooster";
 import { useAudio } from "@/hooks/useAudio";
 import AudioControls from "@/components/AudioControls";
 import { logger } from "@/lib/logger";
-import { FEATURE_BRIDGE, GACHA_DEPLOYED } from "@/lib/featureFlags";
+import { FEATURE_OFFLINE_QUEUE, GACHA_DEPLOYED } from "@/lib/featureFlags";
 import { TierSelector, tiers, type Tier } from "@/components/TierSelector";
 import { BalanceDisplay } from "@/components/BalanceDisplay";
 import { BoosterControl } from "@/components/BoosterControl";
@@ -46,6 +45,7 @@ const Open = () => {
     pendingTx,
     pendingDelta,
     isBalanceLoading,
+    hasBalanceError,
     setPendingDelta,
     clearPendingDelta,
     setPendingTx,
@@ -55,7 +55,6 @@ const Open = () => {
   const [selectedTier, setSelectedTier] = useState<Tier>(tiers[2]); // Default Epic
   const [isLoading, setIsLoading] = useState(false);
   const [pendingStatusError, setPendingStatusError] = useState(false);
-  const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
 
   // Poll status without resubmitting. Read failures retain the transaction hash.
   useEffect(() => {
@@ -99,7 +98,7 @@ const Open = () => {
   }, [pendingTx, selectedTier, isTodayDone, navigate, toast, clearPendingDelta, setPendingTx, markTodayComplete]);
 
   const totalCost = selectedTier.price;
-  const canAfford = balance >= totalCost;
+  const canAfford = !hasBalanceError && balance >= totalCost;
   const isProcessing = isLoading || !!pendingTx;
 
   const openBox = useCallback(async () => {
@@ -136,6 +135,15 @@ const Open = () => {
     }
 
     if (!isOnline) {
+      if (!FEATURE_OFFLINE_QUEUE) {
+        playError();
+        toast({
+          title: "You are offline",
+          description: "Reconnect to the internet to open a box. No transaction was submitted.",
+          variant: "destructive",
+        });
+        return;
+      }
       if (!address) {
         toast({
           title: "Cannot queue",
@@ -202,20 +210,6 @@ const Open = () => {
     clearPendingDelta,
   ]);
 
-  // Bridge swipe gesture removed — it was completely undiscoverable.
-  // When FEATURE_BRIDGE is enabled, a visible button should be used instead.
-
-  const handleBridgeSuccess = useCallback(
-    (_amount: number, txHash: string) => {
-      setIsBridgeModalOpen(false);
-      toast({
-        title: "Bridge submitted",
-        description: `TX: ${txHash.slice(0, 10)}…`,
-      });
-    },
-    [toast],
-  );
-
   const handleDismissPending = useCallback(() => {
     clearPendingDelta();
     setPendingTx("");
@@ -263,6 +257,7 @@ const Open = () => {
         isOnline={isOnline}
         queuedRequestsCount={queuedRequests.length}
         isLoading={isBalanceLoading}
+        hasError={hasBalanceError}
       />
 
       <div className="flex-1 flex flex-col justify-center relative z-10">
@@ -291,6 +286,7 @@ const Open = () => {
             canAfford={canAfford}
             isProcessing={isProcessing}
             isOnline={isOnline}
+            offlineQueueEnabled={FEATURE_OFFLINE_QUEUE}
             gachaDeployed={GACHA_DEPLOYED}
             selectedTierName={selectedTier.name}
             totalCost={totalCost}
@@ -310,7 +306,9 @@ const Open = () => {
             <p className="text-muted-foreground text-base">
               {isOnline
                 ? "Tap the button to open a box and earn SP"
-                : "Tap the button to queue — we'll submit when you're back online"}
+                : FEATURE_OFFLINE_QUEUE
+                  ? "Tap the button to queue an unsigned request for when you're back online"
+                  : "Reconnect to open a box. No transaction can be submitted offline."}
             </p>
           )}
           {!GACHA_DEPLOYED && isConnected && (
@@ -320,7 +318,9 @@ const Open = () => {
           )}
           {!isOnline && (
             <p className="text-orange-400 text-sm font-medium">
-              Offline mode — request will be replayed when you&apos;re back online.
+              {FEATURE_OFFLINE_QUEUE
+                ? "Offline queue enabled — requests still require wallet approval when replayed."
+                : "Offline mode — wallet and blockchain actions are unavailable."}
             </p>
           )}
           {pendingTx && (
@@ -364,14 +364,6 @@ const Open = () => {
           </div>
         </div>
       </div>
-
-      {FEATURE_BRIDGE && (
-        <BridgeModal
-          isOpen={isBridgeModalOpen}
-          onClose={() => setIsBridgeModalOpen(false)}
-          onSuccess={handleBridgeSuccess}
-        />
-      )}
 
       <AudioControls />
     </main>

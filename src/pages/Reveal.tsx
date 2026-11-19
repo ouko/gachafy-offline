@@ -121,7 +121,7 @@ export default function Reveal() {
     );
   }
 
-  const presentation = rarityPresentation[badge.rarity];
+  const presentation = rarityPresentation[badge.rarity as keyof typeof rarityPresentation] ?? rarityPresentation.common;
   const Icon = presentation.icon;
   const shareText = `I minted ${badge.name} on GachaFi and earned ${badge.sp.toLocaleString()} SP.`;
 

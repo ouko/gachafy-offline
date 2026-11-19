@@ -1,5 +1,7 @@
 # GachaFi UX Audit
 
+> **Historical review.** Current Reveal resolves actual NFT data with indexing/error retries, Collection replaces Creator, and Privacy provides consent/data controls. Physical-device accessibility and wallet testing remain launch gates; the old blanket production-ready statement below is not current evidence.
+
 **Date:** 2026-05-05  
 **Updated:** 2026-05-06  
 **Scope:** Core game loop (`/open`), reward screen (`/reveal`), landing page (`/`), wallet & offline contexts, PWA shell, key UI components.  

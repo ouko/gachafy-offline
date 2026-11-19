@@ -10,6 +10,7 @@ export const useWallet = () => {
     isConnected: wallet.isConnected,
     isLoading: wallet.isLoading,
     isBalanceLoading: wallet.isBalanceLoading,
+    hasBalanceError: wallet.hasBalanceError,
     pendingTx: wallet.pendingTx,
     connectWallet,
     setPendingDelta,

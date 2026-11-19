@@ -1,183 +1,113 @@
-# Getting Started with GachaFi
+# Getting Started
 
-This guide walks you from zero to a running local instance — and explains what each part of the codebase does.
+## What this repository contains
 
-> **First-time?** Read this file top-to-bottom.  
-> **Deploying?** See [DEPLOYMENT.md](../DEPLOYMENT.md).  
-> **Auditing?** See [security-audit.md](./security-audit.md) and [backend-architecture-audit.md](./backend-architecture-audit.md).
+GachaFi is a client-only Radix dApp. The Scrypto contract holds paid XRD and mints badge NFTs. The React app submits wallet transactions and reads balances, transaction status, NFT metadata, account inventory, and total mint count from a Radix Gateway.
 
----
+There is no backend, creator-earnings system, governance, leaderboard, or mock mint mode. Daily streaks and consent choices are local UX state. The optional offline queue contains mint intents, not signed transactions, and is disabled by default.
 
-## 1. What You Are Building
+## Prerequisites
 
-GachaFi is a **100 % client-side DApp** (decentralised application). There is no backend server. All state lives in one of two places:
+- Node.js 20.19+ or 22+ and npm.
+- A Radix wallet on Stokenet for end-to-end testing.
+- Rust with the `wasm32-unknown-unknown` target for contract development.
 
-| State | Where It Lives | Who Controls It |
-|-------|---------------|-----------------|
-| Wallet / XRD balance | Radix blockchain | User |
-| Badge NFTs | Radix blockchain (minted by our smart contract) | User |
-| Streaks, preferences, audio mute | `localStorage` / `IndexedDB` | User |
-| Offline mint queue | `IndexedDB` | User |
-| Creator earnings | **Not yet on-chain** (returns honest zeros) | — |
-
-The **smart contract** (`scrypto/gacha/src/lib.rs`) is the only security boundary. Everything in the React app is UX-only and can be bypassed by a motivated user.
-
----
-
-## 2. Prerequisites
+## Install and run
 
 ```bash
-# Node.js 20+ (check with `node --version`)
-# Rust + cargo (only if you want to build the Scrypto contract)
-# A Radix wallet for testing (browser extension or mobile app)
-```
-
----
-
-## 3. Install & Run
-
-```bash
-# 1. Clone
 git clone https://github.com/ouko/gachafy-offline.git
 cd gachafy-offline
-
-# 2. Install dependencies
-npm install
-
-# 3. Copy environment template
+npm ci
 cp .env.example .env
-
-# 4. Edit .env (see section 4 below)
-#    You need at least VITE_RADIX_DAPP_DEFINITION for the wallet button to work.
-
-# 5. Start dev server
 npm run dev
-# → Open http://localhost:5173
 ```
 
----
+The development server listens on `http://localhost:8080`.
 
-## 4. Environment Variables (the ones that matter)
+Set these public values in `.env` before wallet/mint testing:
 
-Open `.env` and fill in the blanks:
+| Variable | Purpose |
+|---|---|
+| `VITE_RADIX_NETWORK` | `stokenet` or `mainnet`; defaults to Stokenet |
+| `VITE_RADIX_DAPP_DEFINITION` | dApp definition account for the selected network |
+| `VITE_GACHA_PACKAGE_ADDRESS` | Deployed Scrypto package |
+| `VITE_GACHA_COMPONENT_ADDRESS` | Instantiated `GachaMinter` component |
+| `VITE_GACHA_BADGE_RESOURCE` | Badge resource created by that component |
 
-| Variable | Required? | What It Does |
-|----------|-----------|--------------|
-| `VITE_RADIX_NETWORK` | Yes | `stokenet` (testnet) or `mainnet` |
-| `VITE_RADIX_DAPP_DEFINITION` | **Yes** | Your dApp definition account address. The wallet refuses to connect without this. |
-| `VITE_GACHA_PACKAGE_ADDRESS` | For minting | The Scrypto package you deployed. Empty = mint button disabled. |
-| `VITE_GACHA_COMPONENT_ADDRESS` | For minting | The component address inside that package. Empty = mint button disabled. |
-| `VITE_ONESIGNAL_APP_ID` | No | Push notifications. Leave blank to disable. |
-| `VITE_SENTRY_DSN` | No | Error tracking. Leave blank to disable. |
+Minting is disabled unless all three GachaFi addresses are present. Optional Gateway/XRD overrides, Sentry, and OneSignal settings are documented in `.env.example`. Every `VITE_` value is public in the built JavaScript; never add secrets.
 
-> **How do I get a dApp definition address?**  
-> Go to the [Radix Dashboard](https://stokenet-dashboard.radixdlt.com/) → Deploy a dApp definition → Set your `localhost:5173` origin as the verified origin.
+## Project map
 
----
-
-## 5. Project Structure (the map)
-
-```
-gachafi-offline/
-├── src/
-│   ├── components/          # UI pieces (buttons, cards, selectors)
-│   ├── contexts/            # React context providers (wallet, game, offline)
-│   ├── hooks/               # Reusable logic (useWallet, useAudio, useStreak)
-│   ├── lib/                 # Services & utilities
-│   │   ├── radix.ts         # ← Radix DApp Toolkit wrapper (wallet, transactions)
-│   │   ├── radix-config.ts  # ← Network addresses & constants (no heavy deps)
-│   │   ├── validation.ts    # ← Zod schemas (address format, amounts, nonces)
-│   │   ├── oneSignal.ts     # Push notification wrapper
-│   │   ├── logger.ts        # Logging + Sentry integration
-│   │   └── featureFlags.ts  # Toggle features without redeploying
-│   ├── pages/               # Route-level components (/open, /reveal, /creator)
-│   └── utils/               # Pure helpers (offlineQueue, pwa detection)
-├── public/                  # Static assets (fonts, icons, service worker)
-├── scrypto/gacha/src/       # ← Smart contract (Rust/Scrypto)
-├── docs/                    # Audits, architecture notes, guides
-└── scripts/                 # One-off Node scripts for Radix dev tasks
+```text
+src/
+  components/          Reusable UI, badge images/cards, consent banner
+  contexts/            Wallet, local game state, optional offline queue
+  hooks/               Context adapters and browser hooks
+  lib/
+    radix.ts           RDT initialization and transaction submission
+    radix-config.ts    Public network/address configuration
+    gateway.ts         Validated Gateway reads and NFT parsers
+    privacy.ts         Consent and local data export/deletion
+    oneSignal.ts       Consent-gated push SDK loading
+    logger.ts          Consent-gated Sentry and scrubbed logging
+  pages/               Open, Reveal, Inventory, Privacy, landing, 404
+  utils/               PWA and IndexedDB helpers
+public/                Static assets and service workers
+scrypto/gacha/         Scrypto 1.3.1 blueprint and integration tests
+scripts/               Development and bundle-check scripts
 ```
 
----
-
-## 6. The Smart Contract (Quick Start)
+## Contract development
 
 ```bash
-cd scrypto/gacha
-
-# Check it compiles
-cargo check
-
-# Run tests (if any)
-cargo test
-
-# Build for deployment
-cargo build --target wasm32-unknown-unknown --release
+rustup target add wasm32-unknown-unknown
+cargo test --manifest-path scrypto/gacha/Cargo.toml
+cargo build --manifest-path scrypto/gacha/Cargo.toml --target wasm32-unknown-unknown --release
 ```
 
-See [SCRYPTO_GUIDE.md](./SCRYPTO_GUIDE.md) for full deploy instructions.
-
----
-
-## 7. Common Commands
+On macOS, if native C++ compilation cannot find `<algorithm>`, use the installed SDK explicitly:
 
 ```bash
-# Development
-npm run dev              # Vite dev server
-npm run check            # TypeScript type check (tsc --noEmit)
-npm run lint             # ESLint
-npm test -- --run        # Vitest (unit tests)
-npm run build            # Production build → dist/
-
-# Preview the production build locally
-npm run build && npm run preview
-
-# Docker
-docker-compose up -d     # Build & run with nginx
+SDK="$(xcrun --show-sdk-path)"
+CC_wasm32_unknown_unknown=/usr/local/opt/llvm/bin/clang \
+CXXFLAGS="-isysroot $SDK -I$SDK/usr/include/c++/v1" \
+  cargo test --manifest-path scrypto/gacha/Cargo.toml
 ```
 
----
+See [SCRYPTO_GUIDE.md](SCRYPTO_GUIDE.md) for deployment and admin operations. The current NFT schema requires a new deployment; old components cannot be upgraded.
 
-## 8. Typical Developer Workflow
+## Daily quality checks
 
-1. **Start the dev server** (`npm run dev`)
-2. **Open the app** in a browser with the Radix Wallet extension installed
-3. **Connect wallet** — if the button is greyed out, check your `.env` has `VITE_RADIX_DAPP_DEFINITION`
-4. **Try to mint** — if minting fails with "not deployed", you need to deploy the Scrypto contract (see SCRYPTO_GUIDE.md)
-5. **Make changes** → `npm run check && npm run lint && npm test -- --run` → commit
+```bash
+npm run check
+npm run lint
+npm test -- --run
+npm run build
+npm run check:bundle
+npm audit --audit-level=high
+```
 
----
+Use `npm run preview` to inspect the production build on port 8080. Do not test only the development server: CSP, service workers, routing, and build-time addresses differ in production.
 
-## 9. Troubleshooting
+## End-to-end developer flow
 
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| "Connect Wallet" button greyed out / does nothing | Missing `VITE_RADIX_DAPP_DEFINITION` | Fill in `.env` |
-| Wallet connects but mint button says "Coming Soon" | `VITE_GACHA_COMPONENT_ADDRESS` is empty | Deploy the contract, paste the address into `.env` |
-| "Invalid admin badge" when calling admin methods | Using the wrong admin badge | Use the badge returned at component instantiation |
-| `npm run check` fails with type errors | Out of date `@radixdlt/radix-dapp-toolkit` types | `npm install` to refresh |
-| Push notifications don't appear | OneSignal not configured or blocked | Check `.env` OneSignal IDs, or disable with blank values |
+1. Configure a current Stokenet contract and dApp definition.
+2. Connect a wallet and select common (8 XRD), rare (15 XRD), or epic (25 XRD).
+3. Review and sign once in the wallet.
+4. Wait for `CommittedSuccess`; Reveal resolves the emitted badge ID and reads its NFT data.
+5. Open Collection and verify account NFTs, actual SP total, and global mint count.
+6. Test delayed indexing and Gateway failure. Retry reads without resubmitting the transaction.
+7. Open Privacy to test optional consent, local export, and deletion.
 
----
+## Troubleshooting
 
-## 10. Security Reminders for Developers
+| Symptom | Check |
+|---|---|
+| Wallet cannot initialize | dApp definition, network, wallet installation, browser CSP |
+| Mint is disabled | All three GachaFi addresses; rebuild after changes |
+| Reveal keeps waiting | Transaction committed but event/NFT not indexed; retry or open Collection |
+| Collection shows an error | Gateway availability and badge resource configuration; assets are not lost |
+| Push is absent | OneSignal configuration and explicit notification consent |
+| Sentry is absent | DSN configuration and explicit error-reporting consent |
 
-- **Never commit `.env`** — it is in `.gitignore` for a reason.
-- **All `VITE_*` variables are public** — they are bundled into the client JS. Do not put secrets there.
-- **The smart contract is the only security boundary** — client-side rate limiting, streaks, etc. are cosmetic and trivially bypassable.
-- **Run `npm audit`** before deploying to check for known vulnerabilities.
-- **Keep branch protection on** — see [BRANCH_PROTECTION.md](./BRANCH_PROTECTION.md).
-
----
-
-## 11. Where to Go Next
-
-| Goal | File |
-|------|------|
-| Deploy to production | [DEPLOYMENT.md](../DEPLOYMENT.md) |
-| Understand the smart contract | [SCRYPTO_GUIDE.md](./SCRYPTO_GUIDE.md) |
-| Security posture | [security-audit.md](./security-audit.md) |
-| Architecture decisions | [backend-architecture-audit.md](./backend-architecture-audit.md) |
-| Design system & theming | [design-system.md](./design-system.md) |
-| UX research & fixes | [ux-audit.md](./ux-audit.md) |
-| CI / branch protection | [BRANCH_PROTECTION.md](./BRANCH_PROTECTION.md) |
+Read [ARCHITECTURE.md](ARCHITECTURE.md), [DEPLOYMENT.md](../DEPLOYMENT.md), and [README.production.md](../README.production.md) before release work.

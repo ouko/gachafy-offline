@@ -1,122 +1,70 @@
-# GachaFi Architecture Overview
+# GachaFi Architecture
 
-A high-level map of how the pieces fit together.
+## System map
 
----
+```text
+React SPA / PWA
+  ├─ WalletContext ─────── lazy Radix DApp Toolkit ─────── Radix Wallet
+  ├─ Open ──────────────── transaction manifest ────────── GachaMinter
+  ├─ Reveal/Inventory ──── typed Gateway reads ─────────── Radix Gateway
+  ├─ GameContext ───────── localStorage (streaks only)
+  ├─ OfflineContext ────── IndexedDB (optional unsigned mint intents)
+  ├─ Privacy ───────────── local consent, export and deletion
+  ├─ Sentry ────────────── optional, consent-gated error reports
+  └─ OneSignal ─────────── optional, consent-gated push subscriptions
 
-## Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         USER'S DEVICE                               │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  React 18 SPA (Vite)                                       │   │
-│  │  • All state in React Context + TanStack Query             │   │
-│  │  • localStorage / IndexedDB for offline queue & prefs      │   │
-│  │  • Service Worker caches static assets                     │   │
-│  │  • NO backend server — pure client-side                    │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                          │                                          │
-│  ┌───────────────────────┼──────────────────────────────────────┐  │
-│  │  Service Worker       │  IndexedDB (offline queue)           │  │
-│  │  • Caches JS/CSS/fonts│  • Queued mint requests             │  │
-│  │  • Offline fallback   │  • Replayed when connection returns │  │
-│  └───────────────────────┴──────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-           │                    │ HTTPS
-           │                    ▼
-           │         ┌────────────────────────┐
-           │         │  Radix Gateway API     │
-           │         │  (public, read-only)   │
-           │         └────────────────────────┘
-           │                    │
-           ▼                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      RADIX DLT BLOCKCHAIN                           │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  GachaMinter Component (Scrypto)                           │   │
-│  │  • Holds XRD payments in vault                              │   │
-│  │  • Mints soulbound badge NFTs                               │   │
-│  │  • Admin-only: withdraw, update tiers, pause                │   │
-│  │  • Emits events for off-chain indexing                      │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                          │                                          │
-│  ┌───────────────────────┼──────────────────────────────────────┐  │
-│  │  User's Wallet        │  Badge NFT Resource                  │  │
-│  │  (holds private keys) │  (mint-only, no burn)                │  │
-│  └───────────────────────┴──────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+GachaMinter (Scrypto)
+  ├─ XRD vault
+  ├─ tier configuration and exact-payment checks
+  ├─ badge resource manager and NFT data
+  ├─ admin proof checks, pause, supply and withdrawal limits
+  └─ BadgeMinted and administrative events
 ```
 
----
+There is no GachaFi backend. Static hosting serves the frontend; the wallet signs transactions; Radix is authoritative for assets and payment state.
 
-## Key Principles
+## Mint and reveal flow
 
-1. **No backend** — There is no server-side code. No API routes, no database, no auth server. The smart contract is the only authority.
+1. Open validates account, tier, amount, deployment configuration, connectivity, and local click rate.
+2. `RadixService` creates a cryptographic nonce and a manifest withdrawing exactly the selected tier price.
+3. The wallet displays and signs the manifest. A signature attempt is never automatically repeated.
+4. `mint_gacha_badge` checks enabled state, tier, supply cap, and exact payment, then mints the NFT and emits `BadgeMinted` with its local ID and transaction hash.
+5. Open polls `/transaction/status`. `CommittedSuccess` records the local daily streak and opens Reveal; `CommittedFailure` clears pending state. Read failures preserve the hash and retry status only.
+6. Reveal reads `/transaction/committed-details`, extracts the event's badge ID, then reads `/state/non-fungible/data`.
+7. The displayed name, image, rarity, description, and SP come from that NFT, not local tier constants. Indexing delay has a retryable state and an explorer link.
 
-2. **Client-side only** — Everything in `src/` runs in the user's browser. Any "validation" in the frontend (rate limits, streak checks, tier prices) is for UX only and can be bypassed.
+## Inventory and statistics
 
-3. **Wallet as identity** — The user's Radix wallet address IS their identity. No passwords, no sessions, no cookies.
+`src/lib/gateway.ts` reads `/state/entity/page/non-fungibles` with Vault aggregation, filters the configured badge resource, and follows both resource-page and vault-ID cursors. NFT data is requested in batches of at most 100. Responses are validated and burned/malformed entries are not shown as valid badges.
 
-4. **Immutable contract** — The Scrypto code cannot be changed after deployment. If you need a fix, deploy a new package + component and update the frontend addresses.
+Collection calculates account SP by summing current badge NFT data. Global supply is `mint_counter - 1` read from component state. There is no global player ranking because no indexed ranking data source exists.
 
----
+## Trust boundaries
 
-## Data Flow: Minting a Badge
+| Component | Trust and limitation |
+|---|---|
+| Scrypto contract | Economic security boundary; exact payment and admin rules are enforced on-chain |
+| Radix Wallet | Holds keys and presents/signs transactions |
+| Radix Gateway | Read/indexing dependency; transport or schema failures are surfaced, never converted to fake success |
+| React frontend | Untrusted client; validation and rate limiting are UX controls only |
+| localStorage/IndexedDB | User-controlled local state; streaks and queued intents have no economic authority |
+| Service worker | Caches static shell only; does not sign mints or cache Gateway responses |
+| Sentry/OneSignal | Optional external processors, disabled until configured and consented |
 
-```
-1. User selects tier → clicks "Open"
-2. Frontend validates inputs (Zod schemas)
-3. Frontend constructs a Radix transaction manifest
-4. Frontend submits manifest via Radix DApp Toolkit
-5. User's wallet extension / mobile app shows the manifest
-6. User signs the transaction
-7. Radix Wallet submits to the Radix ledger
-8. Contract validates payment ≥ tier price
-9. Contract mints badge NFT → deposits into user's account
-10. Contract emits BadgeMinted event
-11. Frontend polls Gateway API for transaction status
-12. Frontend shows "Success!" + navigates to reveal page
-```
+## Contract ownership and upgrades
 
----
+The component is globalized with `OwnerRole::None` and cannot be upgraded in place. The badge resource has an admin-updatable owner role, while minting requires the component-held admin badge. Badge burning is disabled, but badges remain transferable; they are not soulbound.
 
-## Trust Boundaries
+The NFT schema now includes image URL and description. Any schema or logic change requires a new package/component, new frontend addresses, and operator-managed migration. Pause the old component when appropriate.
 
-| Layer | Trust Level | Why |
-|-------|------------|-----|
-| Radix blockchain | **Trusted** | Decentralised consensus, immutable ledger |
-| User's wallet | **Trusted** | Holds private keys, signs transactions |
-| React frontend | **Untrusted** | Can be modified by user (DevTools, modified build) |
-| Service Worker | **Untrusted** | User can unregister or replace it |
-| localStorage / IndexedDB | **Untrusted** | User can clear or edit |
+## Privacy and local data
 
-This is why **all economic logic must live in the smart contract**. The frontend is a pretty interface, not a security layer.
+Wallet addresses are sent to the Gateway for core reads and are public on-chain. Streak dates, consent, and optional queued requests stay on the device until cleared. Privacy settings export/delete local GachaFi data only; they cannot erase blockchain data or promise provider-side deletion.
 
----
+OneSignal's self-hosted loader is inserted after notification consent. Sentry initializes only after error-reporting consent. Wallet connection never requests push permission.
 
-## External Dependencies
+## Deployment boundaries
 
-| Service | Purpose | Can It Be Removed? |
-|---------|---------|-------------------|
-| Radix Gateway API | Read blockchain state (balances, transaction status) | No — but you can self-host |
-| OneSignal CDN | Push notifications | Yes — UI degrades gracefully |
-| Sentry CDN | Error tracking | Yes — errors log to console instead |
-| Google Fonts | Typography | **Already removed** — self-hosted |
+Vite embeds configuration at build time. Docker runs non-root nginx on 8080; Netlify and nginx apply CSP/security headers and SPA rewrites. Production source maps are disabled. COOP/COEP are not enabled because wallet and NFT compatibility must not be sacrificed for unused isolation.
 
----
-
-## File Responsibility Map
-
-| File | What It Owns |
-|------|-------------|
-| `src/lib/radix.ts` | Wallet connection, transaction building, balance polling |
-| `src/lib/radix-config.ts` | Network constants (addresses, URLs) — zero heavy deps |
-| `src/lib/validation.ts` | Zod schemas for all user input |
-| `src/contexts/WalletContext.tsx` | Wallet state, balance polling, connection lifecycle |
-| `src/contexts/GameContext.tsx` | Game state (selected tier, booster, streaks) |
-| `src/contexts/OfflineContext.tsx` | Offline queue, network detection, replay logic |
-| `src/lib/oneSignal.ts` | Push notification initialization & event handling |
-| `src/lib/logger.ts` | Structured logging + Sentry integration |
-| `public/sw.js` | Service worker for offline caching |
-| `scrypto/gacha/src/lib.rs` | Smart contract: minting, admin ops, events |
+CI runs frontend checks, tests, build, bundle budget, dependency audit, secret scanning, Scrypto tests, and release Wasm compilation. These checks do not replace an independent contract audit, real Stokenet wallet test, legal review, or physical mobile testing.

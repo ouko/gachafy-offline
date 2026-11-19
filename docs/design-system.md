@@ -1,5 +1,7 @@
 # GachaFi Design System Specification
 
+> **Historical design reference.** Current pages also include Collection and Privacy, real badge images, and explicit loading/error/retry states. Where this May 2026 specification conflicts with current code, the code and README describe the delivered behavior.
+
 > **Version:** 1.0.0  
 > **Scope:** React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui  
 > **Theme:** Dark fantasy / DeFi gacha aesthetic  

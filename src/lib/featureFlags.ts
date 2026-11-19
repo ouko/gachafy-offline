@@ -11,16 +11,6 @@ const truthy = (v: unknown): boolean => {
   return norm === 'true' || norm === '1' || norm === 'yes' || norm === 'on';
 };
 
-/** Cross-chain bridge UI. The current implementation is a placeholder. */
-export const FEATURE_BRIDGE = truthy(import.meta.env.VITE_FEATURE_BRIDGE);
-
-/**
- * LIVE bridge execution. Even when FEATURE_BRIDGE is on (showing the UI),
- * this flag must ALSO be enabled before the "Start Bridge" button works.
- * This prevents accidental demo-to-production activation.
- */
-export const FEATURE_BRIDGE_LIVE = truthy(import.meta.env.VITE_FEATURE_BRIDGE_LIVE);
-
 /**
  * Offline mint queue. Turning this on stores mint intents in IndexedDB while
  * offline; they're replayed against the wallet when connectivity returns.
@@ -28,12 +18,6 @@ export const FEATURE_BRIDGE_LIVE = truthy(import.meta.env.VITE_FEATURE_BRIDGE_LI
  * trustless way to mint without that, so this is a UX nicety only.
  */
 export const FEATURE_OFFLINE_QUEUE = truthy(import.meta.env.VITE_FEATURE_OFFLINE_QUEUE);
-
-/** Creator dashboard. Honest zeros until on-chain reads land. */
-export const FEATURE_CREATOR_DASHBOARD =
-  import.meta.env.VITE_FEATURE_CREATOR_DASHBOARD === undefined
-    ? true
-    : truthy(import.meta.env.VITE_FEATURE_CREATOR_DASHBOARD);
 
 /** True once the gacha Scrypto component is deployed and addresses are wired up. */
 export const GACHA_DEPLOYED = Boolean(

@@ -2,7 +2,7 @@ import type { GachaBadge } from '@/lib/gateway';
 import { BadgeImage } from './BadgeImage';
 import { cn } from '@/lib/utils';
 
-const rarityStyles: Record<GachaBadge['rarity'], string> = {
+const rarityStyles: Record<string, string> = {
   common: 'border-slate-400/30 bg-slate-400/5',
   rare: 'border-blue-400/30 bg-blue-400/5',
   epic: 'border-purple-400/30 bg-purple-400/5',
@@ -10,7 +10,7 @@ const rarityStyles: Record<GachaBadge['rarity'], string> = {
 
 export function BadgeCard({ badge }: { badge: GachaBadge }) {
   return (
-    <article className={cn('rounded-2xl border p-4', rarityStyles[badge.rarity])}>
+    <article className={cn('rounded-2xl border p-4', rarityStyles[badge.rarity] ?? 'border-border bg-card')}>
       <BadgeImage
         src={badge.imageUrl}
         alt={badge.name}

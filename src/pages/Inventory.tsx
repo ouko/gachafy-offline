@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger';
 export default function Inventory() {
   const { address, isConnected, connectWallet } = useWallet();
   const [badges, setBadges] = useState<GachaBadge[]>([]);
-  const [totalMinted, setTotalMinted] = useState(0);
+  const [totalMinted, setTotalMinted] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshIndex, setRefreshIndex] = useState(0);
@@ -22,6 +22,7 @@ export default function Inventory() {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
+    setTotalMinted(null);
 
     Promise.all([getBadgeInventory(address), getTotalMinted()])
       .then(([items, total]) => {
@@ -79,7 +80,7 @@ export default function Inventory() {
           </Card>
           <Card className="p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground"><Layers className="h-4 w-4" />Global badges</div>
-            <p className="total-supply mt-2 text-3xl font-bold">{totalMinted.toLocaleString()}</p>
+            <p className="total-supply mt-2 text-3xl font-bold">{totalMinted?.toLocaleString() ?? '—'}</p>
           </Card>
         </div>
 

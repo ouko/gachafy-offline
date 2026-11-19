@@ -1,5 +1,7 @@
 # GachaFi Security Audit
 
+> **Historical review.** The May 2026 code snippets and resolutions below are not current source. Recipient events were subsequently removed in favor of transaction hashes, exact payment replaced `>=`, badges are transferable rather than soulbound, and current controls are summarized in `COMPREHENSIVE_SECURITY_PRIVACY_AUDIT.md`.
+
 **Date:** 2026-05-06  
 **Auditors:** Security Engineer + Blockchain Security Auditor (agent personas)  
 **Scope:** Smart contracts, React frontend, PWA shell, service worker, CI/CD, deployment infrastructure, supply chain  

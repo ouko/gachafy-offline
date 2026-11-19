@@ -12,9 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_GACHA_BADGE_RESOURCE?: string;
   readonly VITE_XRD_RESOURCE_ADDRESS?: string;
 
-  readonly VITE_FEATURE_BRIDGE?: string;
   readonly VITE_FEATURE_OFFLINE_QUEUE?: string;
-  readonly VITE_FEATURE_CREATOR_DASHBOARD?: string;
 
   readonly VITE_SENTRY_DSN?: string;
 

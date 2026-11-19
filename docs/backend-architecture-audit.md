@@ -1,5 +1,7 @@
 # GachaFi Backend Architecture Audit
 
+> **Historical review.** There is still no backend. The placeholder Creator dashboard has been removed; current Collection/Reveal views use paginated Gateway NFT data and component supply, while streaks remain local and non-economic. Exact payment and transferable (not soulbound) badges are documented in `ARCHITECTURE.md`.
+
 **Date:** 2026-05-06  
 **Auditor:** Backend Architect (kimi-agent)  
 **Scope:** Smart contracts, service architecture, data persistence, external integrations, CI/CD, deployment security, and backend operational posture.  

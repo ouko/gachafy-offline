@@ -6,20 +6,22 @@ interface BalanceDisplayProps {
   balance: number;
   pendingDelta: number;
   pendingTx: string;
-  streakMultiplier: number;
+  streak: number;
   isOnline: boolean;
   queuedRequestsCount: number;
   isLoading?: boolean;
+  hasError?: boolean;
 }
 
 export const BalanceDisplay = memo(function BalanceDisplay({
   balance,
   pendingDelta,
   pendingTx,
-  streakMultiplier,
+  streak,
   isOnline,
   queuedRequestsCount,
   isLoading = false,
+  hasError = false,
 }: BalanceDisplayProps) {
   // Note: `balance` from WalletContext already includes pendingDelta.
   // Do NOT add it again — that would double-count the optimistic adjustment.
@@ -34,16 +36,18 @@ export const BalanceDisplay = memo(function BalanceDisplay({
       >
         {isLoading ? (
           <div className="h-6 w-32 bg-muted/50 rounded animate-pulse" aria-hidden="true" />
+        ) : hasError ? (
+          <span className="text-sm font-medium text-yellow-400" role="status">Balance unavailable — retrying</span>
         ) : (
           <span className="text-xl font-bold gradient-text-holographic font-mono tracking-wider">
             {displayedBalance.toFixed(3)} XRD
           </span>
         )}
 
-        {streakMultiplier > 1 && (
+        {streak > 0 && (
           <div className="flex items-center gap-2 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 text-white px-4 py-2 rounded-full shadow-lg border border-orange-300/30">
             <Flame size={16} className="animate-pulse text-yellow-200" />
-            <span className="text-sm font-bold tracking-wide">{streakMultiplier}× streak</span>
+            <span className="text-sm font-bold tracking-wide">{streak} day streak</span>
             <Sparkles size={14} className="animate-pulse text-yellow-200" />
           </div>
         )}
