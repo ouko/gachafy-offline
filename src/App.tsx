@@ -11,8 +11,10 @@ import Index from "./pages/Index";
 import Open from "./pages/Open";
 import Reveal from "./pages/Reveal";
 import Inventory from "./pages/Inventory";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import { BottomNav } from "@/components/BottomNav";
+import { ConsentBanner } from "@/components/ConsentBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,10 +46,12 @@ const App = () => (
                   <Route path="/reveal" element={<ErrorBoundary><Reveal /></ErrorBoundary>} />
                   <Route path="/inventory" element={<ErrorBoundary><Inventory /></ErrorBoundary>} />
                   <Route path="/creator" element={<Navigate to="/inventory" replace />} />
+                  <Route path="/privacy" element={<Privacy />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <BottomNav />
+                <ConsentBanner />
               </BrowserRouter>
             </TooltipProvider>
           </OfflineProvider>

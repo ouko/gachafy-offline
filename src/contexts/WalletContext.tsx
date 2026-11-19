@@ -20,7 +20,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getRadixService } from "@/lib/radix-lazy";
-import { oneSignalService } from "@/lib/oneSignal";
 import { logger } from "@/lib/logger";
 
 interface Wallet {
@@ -62,6 +61,14 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     getRadixService().then((service) => {
       if (cancelled) return;
+      // Eagerly initialize RDT in the background. On mobile this is
+      // critical: sendRequest() must call the deep-link transport
+      // immediately while the user-gesture from the click is still
+      // active. Any async delay (module import, state setup) can cause
+      // Safari / Chrome to block the navigation.
+      service.initialize().catch(() => {
+        // Initialization errors are already logged by RadixService.
+      });
       unsubscribe = service.onWalletData((walletData: unknown) => {
         try {
           const address = walletData?.accounts?.[0]?.address ?? "";
@@ -143,14 +150,6 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           isConnected: true,
           isLoading: false,
         }));
-        try {
-          if (oneSignalService.isConfigured) {
-            const subscribed = await oneSignalService.isSubscribed();
-            if (!subscribed) await oneSignalService.requestPermission();
-          }
-        } catch (error) {
-          logger.warn("Push permission request failed", error, "WalletContext");
-        }
       } else {
         setWallet((prev) => ({ ...prev, isLoading: false }));
         throw new Error("Please install Radix Wallet");

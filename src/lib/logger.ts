@@ -1,5 +1,6 @@
 import { sanitizeForLogging } from './validation';
 import * as Sentry from '@sentry/react';
+import { getConsent } from './privacy';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -17,10 +18,7 @@ interface LogEntry {
  */
 export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
-  if (!dsn) {
-    console.info('[Logger] Sentry DSN not configured — error tracking disabled');
-    return;
-  }
+  if (!dsn || !getConsent('errorReporting')) return;
 
   Sentry.init({
     dsn,
@@ -70,7 +68,7 @@ class Logger {
   private isDevelopment = process.env.NODE_ENV !== 'production';
   private logBuffer: LogEntry[] = [];
   private maxBufferSize = 100;
-  private sentryEnabled = Boolean(import.meta.env.VITE_SENTRY_DSN);
+  private sentryEnabled = Boolean(import.meta.env.VITE_SENTRY_DSN) && getConsent('errorReporting');
 
   private log(level: LogLevel, message: string, data?: unknown, context?: string) {
     const entry: LogEntry = {

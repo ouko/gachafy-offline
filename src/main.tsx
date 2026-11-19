@@ -3,9 +3,14 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerSW, setupPWAInstall } from "./utils/pwa";
 import { initSentry } from "./lib/logger";
+import { getConsent } from "./lib/privacy";
+import { oneSignalService } from "./lib/oneSignal";
 
 // Initialize observability before rendering so errors during mount are captured.
 initSentry();
+if (getConsent('notifications')) {
+  void oneSignalService.initialize().catch(() => undefined);
+}
 
 createRoot(document.getElementById("root")!).render(<App />);
 

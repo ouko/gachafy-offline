@@ -1,20 +1,28 @@
-import OneSignal from 'react-onesignal';
+import type OneSignal from 'react-onesignal';
 import { logger } from './logger';
+import { getConsent, setConsent } from './privacy';
 
-/**
- * OneSignal wrapper.
- *
- * If VITE_ONESIGNAL_APP_ID is not set, every method becomes a no-op so the
- * rest of the app can still run (notifications just don't appear). The
- * "demo mode" of the previous implementation has been removed — it
- * masqueraded as working push, which is worse than no push.
- *
- * NOTE: scheduled daily reminders cannot be implemented client-side via
- * setTimeout — the page is closed by then. Real scheduled push must be
- * driven from a backend (OneSignal REST API or scheduled job). The
- * client-side helper below requests permission and registers the device;
- * actual reminders need server work.
- */
+let sdkPromise: Promise<typeof OneSignal> | null = null;
+
+async function loadOneSignalSdk(): Promise<typeof OneSignal> {
+  if (!sdkPromise) {
+    sdkPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>('script[data-gachafi-onesignal]');
+      const script = existing ?? document.createElement('script');
+      script.src = '/onesignal/OneSignalSDK.page.js';
+      script.integrity = 'sha384-9WymDdowrrUwJuXZ2joqlQYNQSPWfKsyBecZsqaJgsTur2qmjjrc3YQVGiaFdFdA';
+      script.crossOrigin = 'anonymous';
+      script.dataset.gachafiOnesignal = 'true';
+      script.onerror = () => reject(new Error('OneSignal SDK failed to load'));
+      script.onload = () => {
+        import('react-onesignal').then((module) => resolve(module.default)).catch(reject);
+      };
+      if (!existing) document.head.appendChild(script);
+    });
+  }
+  return sdkPromise;
+}
+
 export class OneSignalService {
   private isInitialized = false;
   private appId = import.meta.env.VITE_ONESIGNAL_APP_ID || '';
@@ -25,91 +33,77 @@ export class OneSignalService {
   }
 
   async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-
-    if (!this.isConfigured) {
-      logger.info('OneSignal disabled (VITE_ONESIGNAL_APP_ID not set)', null, 'OneSignal');
-      this.isInitialized = true;
-      return;
-    }
+    if (this.isInitialized || !this.isConfigured || !getConsent('notifications')) return;
 
     try {
-      await OneSignal.init({
+      const sdk = await loadOneSignalSdk();
+      await sdk.init({
         appId: this.appId,
         ...(this.safariWebId ? { safari_web_id: this.safariWebId } : {}),
         allowLocalhostAsSecureOrigin: import.meta.env.DEV,
       });
 
-      OneSignal.Notifications.addEventListener('click', (event) => {
-        logger.info('OneSignal notification clicked', { event }, 'OneSignal');
-        if (typeof window === 'undefined') return;
-
-        // Validate the notification URL before navigation to prevent
-        // open redirects if the OneSignal account is compromised.
+      sdk.Notifications.addEventListener('click', (event) => {
         const url = event.result?.url;
-        if (url) {
-          try {
-            const parsed = new URL(url, window.location.origin);
-            if (parsed.origin !== window.location.origin) {
-              logger.warn('Rejecting external notification URL', { url }, 'OneSignal');
-              return;
-            }
-            window.location.href = parsed.pathname + parsed.search;
-            return;
-          } catch {
-            logger.warn('Malformed notification URL', { url }, 'OneSignal');
+        if (typeof window === 'undefined' || !url) return;
+        try {
+          const parsed = new URL(url, window.location.origin);
+          if (parsed.origin !== window.location.origin) {
+            logger.warn('Rejecting external notification URL', null, 'OneSignal');
             return;
           }
+          window.location.href = parsed.pathname + parsed.search;
+        } catch {
+          logger.warn('Malformed notification URL', null, 'OneSignal');
         }
-
-        window.location.href = '/open';
       });
 
       this.isInitialized = true;
-      logger.info('OneSignal initialized', null, 'OneSignal');
     } catch (error) {
+      sdkPromise = null;
       logger.error('OneSignal initialization failed', error, 'OneSignal');
-      // Mark initialized to avoid retry loops on every wallet connect.
-      this.isInitialized = true;
+      throw error;
     }
   }
 
   async requestPermission(): Promise<boolean> {
-    if (!this.isInitialized) await this.initialize();
     if (!this.isConfigured) return false;
-
+    setConsent('notifications', true);
     try {
-      // Use the browser API for the prompt — OneSignal will pick up the
-      // resulting subscription state.
+      await this.initialize();
       const permission = await Notification.requestPermission();
+      if (permission !== 'granted') setConsent('notifications', false);
       return permission === 'granted';
     } catch (error) {
+      setConsent('notifications', false);
       logger.error('Notification permission request failed', error, 'OneSignal');
       return false;
     }
   }
 
-  async getPlayerId(): Promise<string | null> {
-    if (!this.isInitialized) await this.initialize();
-    if (!this.isConfigured) return null;
+  async optOut(): Promise<void> {
+    if (!this.isConfigured || !getConsent('notifications')) return;
     try {
-      const id = await OneSignal.User.PushSubscription.id;
-      return id ?? null;
+      await this.initialize();
+      const sdk = await loadOneSignalSdk();
+      await sdk.Notifications.optOut();
     } catch (error) {
-      logger.error('Failed to get OneSignal player ID', error, 'OneSignal');
-      return null;
+      logger.error('Notification opt-out failed', error, 'OneSignal');
+      throw error;
     }
   }
 
+  async getPlayerId(): Promise<string | null> {
+    if (!this.isConfigured || !getConsent('notifications')) return null;
+    await this.initialize();
+    const sdk = await loadOneSignalSdk();
+    return sdk.User.PushSubscription.id ?? null;
+  }
+
   async isSubscribed(): Promise<boolean> {
-    if (!this.isInitialized) await this.initialize();
-    if (!this.isConfigured) return false;
-    try {
-      return Notification.permission === 'granted';
-    } catch (error) {
-      logger.error('Failed to check subscription status', error, 'OneSignal');
-      return false;
-    }
+    if (!this.isConfigured || !getConsent('notifications')) return false;
+    await this.initialize();
+    return Notification.permission === 'granted';
   }
 }
 

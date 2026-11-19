@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Package, Layers } from "lucide-react";
+import { Package, Layers, Shield } from "lucide-react";
 import { memo } from "react";
 
 export const BottomNav = memo(function BottomNav() {
@@ -10,6 +10,7 @@ export const BottomNav = memo(function BottomNav() {
   const navItems = [
     { path: "/open", label: "Open", icon: Package },
     { path: "/inventory", label: "Collection", icon: Layers },
+    { path: "/privacy", label: "Privacy", icon: Shield },
   ];
 
   // Hide nav on landing page and reveal page for immersion
