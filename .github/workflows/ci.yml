@@ -102,6 +102,4 @@ jobs:
         uses: trufflesecurity/trufflehog@d232362a64a09a9e7d58267b8f5acef00ae90e23
         with:
           path: ./
-          base: main
-          head: HEAD
           extra_args: --only-verified
