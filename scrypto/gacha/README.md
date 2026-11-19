@@ -1,123 +1,52 @@
 # GachaFi Scrypto Contract
 
-Scrypto v1.3.1 smart contract for the GachaFi mystery-box game.
+Scrypto 1.3.1 blueprint for fixed-price GachaFi badge minting.
 
-## Architecture
+## Behavior
 
-| Element | Description |
-|---------|-------------|
-| `GachaMinter` | Main blueprint component. Holds XRD vault + badge resource manager. |
-| `BadgeData` | Non-fungible data schema (name, tier, rarity, sp, nonce, epoch). |
-| `TierConfig` | On-chain pricing & reward table. |
-| `BadgeMinted` | Event emitted on every mint (indexer-friendly). |
+`GachaMinter` accepts exactly 8 XRD for common, 15 XRD for rare, or 25 XRD for epic. It mints an integer-ID non-fungible badge containing name, tier, rarity, SP, client nonce, mint epoch, first-party image URL, and description. Overpayment and underpayment both abort.
 
-## Public Methods
+The contract emits `BadgeMinted`, `TierUpdated`, `XrdWithdrawn`, `EnabledChanged`, and `GachaMinterInitialized`. Privileged methods require a valid non-empty proof of the admin badge. Pause, maximum supply, tier management, withdrawal limits, and XRD withdrawal are supported.
 
-### `instantiate_gacha_minter(xrd_address: ResourceAddress)`
-Returns `(component, admin_badge)`. Sets up default tiers (common=8 XRD, rare=15 XRD, epic=25 XRD).
+Badges cannot be burned by resource rules, but they are transferable and therefore not soulbound. The component is immutable. The badge resource owner role remains admin-updatable; this is an explicit recovery-versus-immutability tradeoff.
 
-### `mint_gacha_badge(payment: FungibleBucket, tier: String, nonce: u64)` → `NonFungibleBucket`
-Validates payment `>=` tier price, deposits XRD, mints NFT badge with metadata, emits `BadgeMinted` event.
-
-### Admin methods (require admin badge proof)
-- `withdraw_xrd(amount: Decimal, admin_badge: Proof)` → `FungibleBucket`
-- `update_tier(tier, price, sp, rarity, admin_badge)`
-- `add_tier(tier, price, sp, rarity, admin_badge)`
-
-### Read-only
-- `get_tier_price(tier: String)` → `Decimal`
-- `get_tier_config(tier: String)` → `TierConfig`
-- `get_collected_xrd()` → `Decimal`
-- `get_mint_counter()` → `u64`
-
-## Build
+## Build and test
 
 ```bash
-cd scrypto/gacha
-scrypto build
+rustup target add wasm32-unknown-unknown
+cargo test
+cargo build --target wasm32-unknown-unknown --release
 ```
 
-### macOS Note
-
-Apple's default `clang` does not include the WebAssembly backend, which is required for compiling Scrypto contracts. If you see `No available targets are compatible with triple "wasm32-unknown-unknown"`, install LLVM via Homebrew and set the compiler path:
+On macOS with missing C++ headers:
 
 ```bash
-brew install llvm
-export CC=/usr/local/opt/llvm/bin/clang
-export CXX=/usr/local/opt/llvm/bin/clang++
-scrypto build
+SDK="$(xcrun --show-sdk-path)"
+CC_wasm32_unknown_unknown=/usr/local/opt/llvm/bin/clang \
+CXXFLAGS="-isysroot $SDK -I$SDK/usr/include/c++/v1" cargo test
 ```
 
-## Test
+If WebAssembly compilation reports no compatible target, install LLVM and set only `CC_wasm32_unknown_unknown` to Homebrew LLVM. Keep Apple Clang for host C++ code to avoid mixing incompatible header sets. CI also runs tests and the release Wasm build.
+
+## Public interface
+
+- `instantiate_gacha_minter(xrd_address)` returns the component and deployer admin badge.
+- `mint_gacha_badge(payment, tier, nonce)` returns the minted NFT bucket.
+- `get_tier_price`, `get_tier_config`, `get_collected_xrd`, `get_mint_counter`, `get_total_minted`, `get_badge_resource_address`, `is_enabled`, `get_max_supply`, `get_withdrawal_limit`, and `get_withdrawn_this_epoch` provide reads.
+- `withdraw_xrd`, `update_tier`, `add_tier`, `set_enabled`, `set_max_supply`, and `set_withdrawal_limit` require admin proof.
+
+## Deployment
+
+Build the Wasm and package definition with the Scrypto toolchain, publish the package, then call `instantiate_gacha_minter` with the selected network's XRD resource. Deposit the returned admin badge into the operator account.
+
+Record all three frontend values:
 
 ```bash
-scrypto test
+VITE_GACHA_PACKAGE_ADDRESS=package_...
+VITE_GACHA_COMPONENT_ADDRESS=component_...
+VITE_GACHA_BADGE_RESOURCE=resource_...
 ```
 
-> **Note:** First test run compiles the entire Radix Engine simulator (`scrypto-test` + `radix-engine` + `wasmi` + `wasm-opt`). This is a one-time cost of ~10–15 minutes depending on hardware. Subsequent runs are fast.
+The current NFT data schema is not compatible with an older component. Deploy a new package/component rather than reusing an old address. Test exact payments, events, metadata reads, admin authorization, pause, and withdrawal behavior on Stokenet before Mainnet.
 
-## Deploy
-
-### 1. Build & publish (Stokenet)
-
-```bash
-scrypto build
-resim publish .
-```
-
-Or via Radix Dashboard → Deploy Package.
-
-### 2. Instantiate
-
-```bash
-resim call-function <package_address> GachaMinter instantiate_gacha_minter <xrd_address>
-```
-
-Save the returned **component address** and **admin badge address**.
-
-### 3. Wire frontend
-
-Add to `.env` / deployment environment:
-
-```bash
-VITE_GACHA_PACKAGE_ADDRESS=<package_address>
-VITE_GACHA_COMPONENT_ADDRESS=<component_address>
-```
-
-Then set `GACHA_DEPLOYED = true` in `src/lib/radix-config.ts`.
-
-## Frontend Transaction Manifest
-
-```
-CALL_METHOD
-    Address("<user_account>")
-    "withdraw"
-    Address("<xrd_address>")
-    Decimal("8")
-;
-TAKE_ALL_FROM_WORKTOP
-    Address("<xrd_address>")
-    Bucket("payment")
-;
-CALL_METHOD
-    Address("<gacha_component>")
-    "mint_gacha_badge"
-    Bucket("payment")
-    "common"
-    12345u64
-;
-CALL_METHOD
-    Address("<user_account>")
-    "deposit_batch"
-    Expression("ENTIRE_WORKTOP")
-;
-```
-
-## Access Control
-
-| Resource | Minter Role | Burner Role |
-|----------|-------------|-------------|
-| Admin Badge | n/a (fixed supply of 2) | n/a |
-| Gacha Badge | Admin badge proof required | `deny_all` (soulbound) |
-
-The component holds one admin badge in its vault to authorize minting. The deployer retains the second admin badge for withdrawals and tier management.
+See [../../docs/SCRYPTO_GUIDE.md](../../docs/SCRYPTO_GUIDE.md) for manifests and operational checks.

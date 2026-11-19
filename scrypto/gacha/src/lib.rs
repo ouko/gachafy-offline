@@ -20,6 +20,10 @@ pub struct BadgeData {
     pub nonce: u64,
     /// Ledger epoch at mint time
     pub minted_at_epoch: u64,
+    /// First-party image displayed by wallets and the GachaFi collection.
+    pub image_url: String,
+    /// Human-readable description stored with the badge.
+    pub description: String,
 }
 
 /// On-chain configuration for a single tier.
@@ -92,12 +96,30 @@ impl ScryptoEvent for EnabledChanged {
     const EVENT_NAME: &'static str = "EnabledChanged";
 }
 
+/// Emitted once when the component is instantiated.
+#[derive(ScryptoSbor)]
+pub struct GachaMinterInitialized {
+    pub admin_badge_address: ResourceAddress,
+    pub badge_resource_address: ResourceAddress,
+    pub initial_tiers: Vec<(String, TierConfig)>,
+}
+
+impl ScryptoEvent for GachaMinterInitialized {
+    const EVENT_NAME: &'static str = "GachaMinterInitialized";
+}
+
 // ----------------------------------------------------------------------------
 // Blueprint
 // ----------------------------------------------------------------------------
 
 #[blueprint]
-#[events(BadgeMinted, TierUpdated, XrdWithdrawn, EnabledChanged)]
+#[events(
+    BadgeMinted,
+    TierUpdated,
+    XrdWithdrawn,
+    EnabledChanged,
+    GachaMinterInitialized
+)]
 mod gacha_minter {
     struct GachaMinter {
         /// Vault holding collected XRD payments.
@@ -114,6 +136,14 @@ mod gacha_minter {
         mint_counter: u64,
         /// Emergency pause switch. When false, minting is disabled.
         enabled: bool,
+        /// Maximum number of badges that can ever be minted (None = unlimited).
+        max_supply: Option<u64>,
+        /// Per-epoch withdrawal limit for admin operations (None = unlimited).
+        withdrawal_limit: Option<Decimal>,
+        /// Amount withdrawn in the current epoch.
+        withdrawn_this_epoch: Decimal,
+        /// Epoch number of the last withdrawal (for epoch rollover tracking).
+        last_withdrawal_epoch: u64,
     }
 
     impl GachaMinter {
@@ -125,7 +155,9 @@ mod gacha_minter {
         /// # Returns
         /// * `Global<GachaMinter>` — The globalized component.
         /// * `FungibleBucket` — A single admin badge for the deployer.
-        pub fn instantiate_gacha_minter(xrd_address: ResourceAddress) -> (Global<GachaMinter>, FungibleBucket) {
+        pub fn instantiate_gacha_minter(
+            xrd_address: ResourceAddress,
+        ) -> (Global<GachaMinter>, FungibleBucket) {
             // Create a single admin badge for the deployer.
             let mut admin_badge: FungibleBucket = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
@@ -142,6 +174,10 @@ mod gacha_minter {
 
             // Create the non-fungible badge resource with no initial supply.
             // Only the component itself (by proving admin badge ownership) can mint.
+            //
+            // SECURITY NOTE: OwnerRole is Updatable so the admin can recover from
+            // a lost badge scenario or fix metadata. OwnerRole::Fixed would make
+            // resource rules immutable, but lost admin badges would be unrecoverable.
             let badge_resource_manager = ResourceBuilder::new_integer_non_fungible::<BadgeData>(
                 OwnerRole::Updatable(rule!(require(admin_badge_address))),
             )
@@ -149,6 +185,7 @@ mod gacha_minter {
                 init {
                     "name" => "GachaFi Badge", locked;
                     "description" => "Proof of opening a GachaFi mystery box.", locked;
+                    "icon_url" => "https://gachafi.app/icon-512.png", locked;
                 }
             })
             .mint_roles(mint_roles! {
@@ -192,18 +229,32 @@ mod gacha_minter {
             let component_admin_badge = admin_badge.take(1);
             let deployer_admin_badge = admin_badge;
 
+            let badge_resource_address = badge_resource_manager.address();
+
             let component = Self {
                 xrd_vault: FungibleVault::new(xrd_address),
                 badge_resource_manager,
-                tier_configs,
+                tier_configs: tier_configs.clone(),
                 admin_badge_address,
                 admin_badge_vault: FungibleVault::with_bucket(component_admin_badge),
                 mint_counter: 1,
                 enabled: true,
+                max_supply: None,
+                withdrawal_limit: None,
+                withdrawn_this_epoch: Decimal::ZERO,
+                last_withdrawal_epoch: 0,
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
             .globalize();
+
+            // Emit initialization event for off-chain indexers.
+            let initial_tiers: Vec<(String, TierConfig)> = tier_configs.into_iter().collect();
+            Runtime::emit_event(GachaMinterInitialized {
+                admin_badge_address,
+                badge_resource_address,
+                initial_tiers,
+            });
 
             (component, deployer_admin_badge)
         }
@@ -211,7 +262,7 @@ mod gacha_minter {
         /// Mint a gacha badge in exchange for XRD.
         ///
         /// # Arguments
-        /// * `payment` — Fungible bucket containing at least the tier price in XRD.
+        /// * `payment` — Fungible bucket containing exactly the tier price in XRD.
         /// * `tier` — Tier id: "common", "rare", or "epic".
         /// * `nonce` — Client-generated nonce (stored in badge metadata for correlation).
         ///
@@ -219,7 +270,7 @@ mod gacha_minter {
         /// * `NonFungibleBucket` — The newly minted badge NFT.
         ///
         /// # Panics
-        /// Panics if the tier is unknown or the payment amount is insufficient.
+        /// Panics if the tier is unknown or the payment amount differs from the tier price.
         pub fn mint_gacha_badge(
             &mut self,
             payment: FungibleBucket,
@@ -227,6 +278,7 @@ mod gacha_minter {
             nonce: u64,
         ) -> NonFungibleBucket {
             assert!(self.enabled, "Minting is currently paused");
+            assert!(tier.len() <= 32, "Tier id too long");
 
             // Validate tier exists.
             let config = self
@@ -235,11 +287,19 @@ mod gacha_minter {
                 .expect("Invalid tier: must be common, rare, or epic")
                 .clone();
 
-            // Require at least the tier price (allows frontend streak discounts and
-            // prevents underpay; overage is kept in the vault as a tip).
+            // Enforce supply cap if configured.
+            if let Some(max) = self.max_supply {
+                assert!(
+                    self.mint_counter <= max,
+                    "Maximum supply of {} badges has been reached",
+                    max
+                );
+            }
+
+            // Exact payment prevents accidental overpayment from being retained.
             assert!(
-                payment.amount() >= config.price,
-                "Payment must be at least {} XRD for tier {}, received {}",
+                payment.amount() == config.price,
+                "Payment must be exactly {} XRD for tier {}, received {}",
                 config.price,
                 tier,
                 payment.amount()
@@ -249,12 +309,35 @@ mod gacha_minter {
             self.xrd_vault.put(payment);
 
             // Mint the badge NFT, authorized by the component's admin badge.
-            let badge_id = NonFungibleLocalId::integer(self.mint_counter);
+            // Use a hash of the transaction hash combined with the counter to make
+            // the ID unpredictable and resistant to front-running (M-004).
+            let tx_hash = Runtime::transaction_hash();
+            let tx_hash_bytes = tx_hash.0; // [u8; 32]
+            let hash_component = u64::from_le_bytes([
+                tx_hash_bytes[0],
+                tx_hash_bytes[1],
+                tx_hash_bytes[2],
+                tx_hash_bytes[3],
+                tx_hash_bytes[4],
+                tx_hash_bytes[5],
+                tx_hash_bytes[6],
+                tx_hash_bytes[7],
+            ]);
+            let badge_id_value = self.mint_counter.wrapping_add(hash_component);
+            let badge_id = NonFungibleLocalId::integer(badge_id_value);
             self.mint_counter += 1;
 
             let badge_name = format!("{} Badge #{}", config.rarity.to_uppercase(), badge_id);
+            let image_url = match tier.as_str() {
+                "common" | "rare" | "epic" => format!("https://gachafi.app/badges/{}.png", tier),
+                _ => "https://gachafi.app/icon-512.png".to_string(),
+            };
+            let description = format!(
+                "A {} GachaFi badge awarding {} SP.",
+                config.rarity, config.sp
+            );
 
-            let badge = self.admin_badge_vault.authorize_with_amount(dec!(1), || {
+            let badge = self.admin_badge_vault.authorize_with_amount(dec!("1"), || {
                 self.badge_resource_manager.mint_non_fungible(
                     &badge_id,
                     BadgeData {
@@ -264,6 +347,8 @@ mod gacha_minter {
                         sp: config.sp,
                         nonce,
                         minted_at_epoch: Runtime::current_epoch().number(),
+                        image_url,
+                        description,
                     },
                 )
             });
@@ -287,10 +372,7 @@ mod gacha_minter {
         /// * `amount` — Amount of XRD to withdraw.
         /// * `admin_badge` — Proof of admin badge ownership.
         pub fn withdraw_xrd(&mut self, amount: Decimal, admin_badge: Proof) -> FungibleBucket {
-            assert!(
-                admin_badge.resource_address() == self.admin_badge_address,
-                "Invalid admin badge"
-            );
+            self.assert_admin(admin_badge);
             assert!(amount > Decimal::ZERO, "Withdrawal amount must be positive");
             assert!(
                 amount <= self.xrd_vault.amount(),
@@ -298,7 +380,24 @@ mod gacha_minter {
                 amount,
                 self.xrd_vault.amount()
             );
+
+            // Enforce per-epoch withdrawal limit if configured.
+            let current_epoch = Runtime::current_epoch().number();
+            if current_epoch != self.last_withdrawal_epoch {
+                self.last_withdrawal_epoch = current_epoch;
+                self.withdrawn_this_epoch = Decimal::ZERO;
+            }
+            if let Some(limit) = self.withdrawal_limit {
+                assert!(
+                    self.withdrawn_this_epoch + amount <= limit,
+                    "Withdrawal exceeds epoch limit: already withdrawn {} of {} XRD this epoch",
+                    self.withdrawn_this_epoch,
+                    limit
+                );
+            }
+
             let bucket = self.xrd_vault.take(amount);
+            self.withdrawn_this_epoch += amount;
             Runtime::emit_event(XrdWithdrawn {
                 amount,
                 remaining: self.xrd_vault.amount(),
@@ -323,19 +422,28 @@ mod gacha_minter {
             rarity: String,
             admin_badge: Proof,
         ) {
-            assert!(
-                admin_badge.resource_address() == self.admin_badge_address,
-                "Invalid admin badge"
-            );
+            self.assert_admin(admin_badge);
             assert!(price > Decimal::ZERO, "Price must be strictly positive");
             assert!(sp > 0, "SP must be strictly positive");
+            assert!(
+                !tier.is_empty() && tier.len() <= 32,
+                "Tier id must be 1-32 bytes"
+            );
+            assert!(
+                !rarity.is_empty() && rarity.len() <= 32,
+                "Rarity label must be 1-32 bytes"
+            );
             assert!(
                 self.tier_configs.contains_key(&tier),
                 "Tier does not exist; use add_tier to create it"
             );
             self.tier_configs.insert(
                 tier.clone(),
-                TierConfig { price, sp, rarity: rarity.clone() },
+                TierConfig {
+                    price,
+                    sp,
+                    rarity: rarity.clone(),
+                },
             );
             Runtime::emit_event(TierUpdated {
                 tier,
@@ -363,19 +471,28 @@ mod gacha_minter {
             rarity: String,
             admin_badge: Proof,
         ) {
-            assert!(
-                admin_badge.resource_address() == self.admin_badge_address,
-                "Invalid admin badge"
-            );
+            self.assert_admin(admin_badge);
             assert!(price > Decimal::ZERO, "Price must be strictly positive");
             assert!(sp > 0, "SP must be strictly positive");
+            assert!(
+                !tier.is_empty() && tier.len() <= 32,
+                "Tier id must be 1-32 bytes"
+            );
+            assert!(
+                !rarity.is_empty() && rarity.len() <= 32,
+                "Rarity label must be 1-32 bytes"
+            );
             assert!(
                 !self.tier_configs.contains_key(&tier),
                 "Tier already exists; use update_tier to modify it"
             );
             self.tier_configs.insert(
                 tier.clone(),
-                TierConfig { price, sp, rarity: rarity.clone() },
+                TierConfig {
+                    price,
+                    sp,
+                    rarity: rarity.clone(),
+                },
             );
             Runtime::emit_event(TierUpdated {
                 tier,
@@ -388,10 +505,7 @@ mod gacha_minter {
 
         /// Read-only: get the price for a tier.
         pub fn get_tier_price(&self, tier: String) -> Decimal {
-            self.tier_configs
-                .get(&tier)
-                .expect("Tier not found")
-                .price
+            self.tier_configs.get(&tier).expect("Tier not found").price
         }
 
         /// Read-only: get the full tier config.
@@ -412,16 +526,23 @@ mod gacha_minter {
             self.mint_counter
         }
 
+        /// Read-only: resource address for all badges minted by this component.
+        pub fn get_badge_resource_address(&self) -> ResourceAddress {
+            self.badge_resource_manager.address()
+        }
+
+        /// Read-only: number of badges successfully minted.
+        pub fn get_total_minted(&self) -> u64 {
+            self.mint_counter.saturating_sub(1)
+        }
+
         /// Enable or disable minting. Admin only.
         ///
         /// # Arguments
         /// * `enabled` — `true` to allow minting, `false` to pause.
         /// * `admin_badge` — Proof of admin badge ownership.
         pub fn set_enabled(&mut self, enabled: bool, admin_badge: Proof) {
-            assert!(
-                admin_badge.resource_address() == self.admin_badge_address,
-                "Invalid admin badge"
-            );
+            self.assert_admin(admin_badge);
             if self.enabled == enabled {
                 return; // no-op, no event
             }
@@ -432,6 +553,44 @@ mod gacha_minter {
         /// Read-only: whether minting is currently enabled.
         pub fn is_enabled(&self) -> bool {
             self.enabled
+        }
+
+        /// Set the maximum supply cap. Admin only.
+        /// Pass `None` to remove the cap (unlimited minting).
+        pub fn set_max_supply(&mut self, max_supply: Option<u64>, admin_badge: Proof) {
+            self.assert_admin(admin_badge);
+            self.max_supply = max_supply;
+        }
+
+        /// Read-only: current max supply cap (None = unlimited).
+        pub fn get_max_supply(&self) -> Option<u64> {
+            self.max_supply
+        }
+
+        /// Set the per-epoch withdrawal limit. Admin only.
+        /// Pass `None` to remove the limit.
+        pub fn set_withdrawal_limit(&mut self, limit: Option<Decimal>, admin_badge: Proof) {
+            self.assert_admin(admin_badge);
+            if let Some(value) = limit {
+                assert!(value > Decimal::ZERO, "Withdrawal limit must be positive");
+                self.withdrawal_limit = Some(value);
+            } else {
+                self.withdrawal_limit = None;
+            }
+        }
+
+        /// Read-only: current per-epoch withdrawal limit (None = unlimited).
+        pub fn get_withdrawal_limit(&self) -> Option<Decimal> {
+            self.withdrawal_limit
+        }
+
+        /// Read-only: amount withdrawn in the current epoch.
+        pub fn get_withdrawn_this_epoch(&self) -> Decimal {
+            self.withdrawn_this_epoch
+        }
+
+        fn assert_admin(&self, proof: Proof) {
+            proof.check(self.admin_badge_address);
         }
     }
 }
