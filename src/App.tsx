@@ -15,6 +15,7 @@ import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 import { BottomNav } from "@/components/BottomNav";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { AppHeader } from "@/components/AppHeader";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <AppHeader />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/open" element={<ErrorBoundary><Open /></ErrorBoundary>} />

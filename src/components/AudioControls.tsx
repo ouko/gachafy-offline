@@ -6,41 +6,33 @@ import { useAudio } from "@/hooks/useAudio";
 const AudioControls = () => {
   const { settings, toggleAudio, setVolume, playButtonClick } = useAudio();
 
-  const handleToggle = () => {
-    playButtonClick();
-    toggleAudio();
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0]);
-  };
-
   return (
-    <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-background/80 backdrop-blur-md border border-border/50 rounded-lg p-3">
+    <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/70 p-1.5 shadow-sm">
       <Button
         variant="ghost"
         size="sm"
-        onClick={handleToggle}
-        className="p-2"
+        onClick={() => {
+          playButtonClick();
+          toggleAudio();
+        }}
+        className="h-8 w-8 rounded-full p-0"
+        aria-label={settings.enabled ? "Mute audio" : "Enable audio"}
       >
-        {settings.enabled ? (
-          <Volume2 className="h-4 w-4" />
-        ) : (
-          <VolumeX className="h-4 w-4" />
-        )}
+        {settings.enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
       </Button>
-      
+
       {settings.enabled && (
-        <div className="flex items-center gap-2 min-w-[80px]">
+        <div className="flex items-center gap-2 pr-2">
           <Slider
             value={[settings.volume]}
-            onValueChange={handleVolumeChange}
+            onValueChange={(value) => setVolume(value[0])}
             max={1}
             min={0}
             step={0.1}
-            className="w-16"
+            className="w-12 sm:w-16"
+            aria-label="Audio volume"
           />
-          <span className="text-xs text-muted-foreground min-w-[30px]">
+          <span className="w-8 text-xs tabular-nums text-muted-foreground">
             {Math.round(settings.volume * 100)}%
           </span>
         </div>

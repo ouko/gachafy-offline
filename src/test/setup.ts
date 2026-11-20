@@ -44,6 +44,13 @@ Object.defineProperty(globalThis, "matchMedia", {
   }),
 });
 
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(globalThis, "ResizeObserver", { value: ResizeObserverStub, configurable: true });
+
 // Mock crypto.getRandomValues for tests
 Object.defineProperty(globalThis, "crypto", {
   value: {
