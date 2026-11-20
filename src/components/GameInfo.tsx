@@ -7,7 +7,7 @@ export const GameInfo = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="relative z-10">
+    <div className="relative z-10" id="how-it-works">
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}

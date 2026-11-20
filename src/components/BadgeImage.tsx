@@ -23,6 +23,8 @@ export function BadgeImage({ src, alt, className, eager = false }: BadgeImagePro
       alt={alt}
       className={cn('object-contain', className)}
       loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      draggable={false}
       onError={() => {
         if (!failed) setFailedSrc(src);
       }}

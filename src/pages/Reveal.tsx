@@ -90,7 +90,7 @@ export default function Reveal() {
 
   if (error) {
     return (
-      <main className="min-h-screen gradient-reveal flex items-center justify-center p-4">
+      <main className="min-h-screen game-background flex items-center justify-center p-4">
         <div role="alert" className="max-w-sm text-center">
           <RefreshCw className="mx-auto mb-4 h-12 w-12 text-white/70" />
           <h1 className="text-2xl font-bold text-white">Could not load your badge</h1>
@@ -111,7 +111,7 @@ export default function Reveal() {
 
   if (!badge) {
     return (
-      <main className="min-h-screen gradient-reveal flex items-center justify-center p-4">
+      <main className="min-h-screen game-background flex items-center justify-center p-4">
         <div role="status" className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
           <h1 className="text-xl font-semibold text-white">Confirming your badge…</h1>
@@ -135,7 +135,7 @@ export default function Reveal() {
   };
 
   return (
-    <main className="min-h-screen gradient-reveal flex flex-col items-center justify-center p-4">
+    <main className="min-h-screen game-background flex flex-col items-center justify-center p-4">
       <div className="relative mb-8">
         <BadgeImage
           src={badge.imageUrl}

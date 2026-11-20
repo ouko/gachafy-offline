@@ -78,7 +78,7 @@ export default function Privacy() {
   };
 
   return (
-    <main className="min-h-screen bg-background p-4 pb-24">
+    <main className="game-background min-h-screen px-4 pb-28 pt-20">
       <div className="mx-auto max-w-3xl space-y-6">
         <header>
           <Shield className="mb-3 h-10 w-10 text-primary" />

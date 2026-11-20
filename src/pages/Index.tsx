@@ -1,25 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import HeroSection from "@/components/HeroSection";
-import AudioControls from "@/components/AudioControls";
 import { setupPWAInstall, isStandalone } from "@/utils/pwa";
 import { X, Download } from "lucide-react";
 
 const pwaInstall = setupPWAInstall();
 
 const Index = () => {
-  const navigate = useNavigate();
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-
-  useEffect(() => {
-    // Use replace: true so the landing page doesn't create a back-button trap.
-    // Pressing back from /open will exit the app instead of looping here.
-    const timer = setTimeout(() => {
-      navigate('/open', { replace: true });
-    }, 6000);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
 
   useEffect(() => {
     // Surface the PWA install prompt on the landing page.
@@ -46,7 +33,6 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background relative">
       <HeroSection />
-      <AudioControls />
 
       {showInstallBanner && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border p-4 animate-in slide-in-from-bottom">

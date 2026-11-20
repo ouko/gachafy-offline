@@ -46,7 +46,7 @@ export default function Inventory() {
 
   if (!isConnected) {
     return (
-      <main className="min-h-screen bg-background p-4 pb-24 flex items-center justify-center">
+      <main className="game-background flex min-h-screen items-center justify-center px-4 pb-28 pt-20">
         <Card className="max-w-md p-8 text-center">
           <Wallet className="mx-auto mb-4 h-12 w-12 text-primary" />
           <h1 className="mb-2 text-2xl font-bold">Your Collection</h1>
@@ -60,7 +60,7 @@ export default function Inventory() {
   const totalSp = badges.reduce((sum, badge) => sum + badge.sp, 0);
 
   return (
-    <main className="min-h-screen bg-background p-4 pb-24">
+    <main className="game-background min-h-screen px-4 pb-28 pt-20">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex items-center justify-between gap-4">
           <div>
