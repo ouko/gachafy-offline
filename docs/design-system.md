@@ -2,6 +2,20 @@
 
 > **Historical design reference.** Current pages also include Collection and Privacy, real badge images, and explicit loading/error/retry states. Where this May 2026 specification conflicts with current code, the code and README describe the delivered behavior.
 
+## Current gaming UI direction — November 2026
+
+The current implementation retains the original HSL palette but replaces high-noise effects with a precise mobile-first shell:
+
+- `AppHeader` uses a vector `PackageOpen` mark and contains audio controls. Main routes reserve 80px of top space; landing and Reveal remain immersive.
+- `BottomNav` is a bounded three-column grid. Links use `min-w-0` and safe-area padding so Privacy cannot clip off-screen.
+- Tier cards are native buttons with stable dimensions, visible rarity labels, and no selected scaling. Mobile scrolling starts at the left edge; desktop uses three equal columns.
+- Balance uses a labeled `game-panel`, not a continuously glowing pill. The primary Connect/Open action shares one full-width purple/pink treatment.
+- `game-background` uses a subtle grid and radial glow. Constant particles, CTA animation, card pulsing, and heavy foreground blur are not part of the current design.
+- Landing has explicit Play/How to Play actions and no automatic redirect. Reveal and Collection display actual NFT images without filters.
+- Selection/hover transitions target 150–250ms. Reduced-motion preferences override animations globally.
+
+The sections below remain useful as historical token references, but obsolete component measurements and animation prescriptions should not be restored.
+
 > **Version:** 1.0.0  
 > **Scope:** React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui  
 > **Theme:** Dark fantasy / DeFi gacha aesthetic  

@@ -41,7 +41,7 @@ See [docs/SCRYPTO_GUIDE.md](docs/SCRYPTO_GUIDE.md) for building and deploying th
 
 | Route | Purpose |
 |---|---|
-| `/` | Landing and install prompt; redirects to Open |
+| `/` | Landing, install prompt, and explicit Play link |
 | `/open` | Wallet, tier selection, transaction submission and status recovery |
 | `/reveal` | Resolves the actual `BadgeMinted` event and NFT data |
 | `/inventory` | Paginated account NFTs, actual account SP, and global mint count |
