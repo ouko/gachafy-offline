@@ -4,7 +4,7 @@
 
 - React 18, TypeScript, Vite 7, React Router 7, Tailwind, npm.
 - Radix DApp Toolkit 2.3 and validated Radix Gateway REST reads.
-- Scrypto 1.3.1 contract in `scrypto/gacha`.
+- Scrypto 1.3.1 contract in `scrypto/gacha`, verified with Rust 1.93.1.
 - Vitest and Testing Library tests in `src/**/*.test.ts*`.
 
 The legacy React 17/Zustand app from the remote rewritten history is superseded. Do not restore its mock mint, fake governance, hardcoded leaderboard, PostHog, or simulated bridge behavior.

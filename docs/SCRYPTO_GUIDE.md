@@ -22,10 +22,12 @@ Badges are non-burnable by resource rule but transferable, not soulbound. The co
 
 ## Build and test
 
-Install Rust, the Wasm target, and Scrypto tooling compatible with 1.3.1:
+Install the verified Rust toolchain, Wasm target, source component, and Scrypto tooling compatible with 1.3.1:
 
 ```bash
-rustup target add wasm32-unknown-unknown
+rustup toolchain install 1.93.1
+rustup component add rust-src --toolchain 1.93.1
+rustup target add wasm32-unknown-unknown --toolchain 1.93.1
 cd scrypto/gacha
 cargo test
 scrypto build

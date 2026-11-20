@@ -13,8 +13,10 @@ Badges cannot be burned by resource rules, but they are transferable and therefo
 ## Build and test
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo test
+rustup toolchain install 1.93.1
+rustup component add rust-src --toolchain 1.93.1
+rustup target add wasm32-unknown-unknown --toolchain 1.93.1
+cargo +1.93.1 test
 cargo build --target wasm32-unknown-unknown --release
 ```
 

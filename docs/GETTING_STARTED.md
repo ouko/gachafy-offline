@@ -10,7 +10,7 @@ There is no backend, creator-earnings system, governance, leaderboard, or mock m
 
 - Node.js 20.19+ or 22+ and npm.
 - A Radix wallet on Stokenet for end-to-end testing.
-- Rust with the `wasm32-unknown-unknown` target for contract development.
+- Rust 1.93.1 with the `wasm32-unknown-unknown` target and `rust-src` component for contract development.
 
 ## Install and run
 
