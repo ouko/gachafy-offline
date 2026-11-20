@@ -207,6 +207,13 @@ describe("Open page — integration", () => {
     expect(screen.getByRole("button", { name: /connect wallet/i })).toBeInTheDocument();
   });
 
+  it("shows the wallet helper text only once", () => {
+    walletState.isConnected = false;
+    walletState.address = "";
+    render(<Open />);
+    expect(screen.getAllByText(/Connect your Radix wallet to start/i)).toHaveLength(1);
+  });
+
   it("shows insufficient funds when balance is below cost", () => {
     walletState.balance = 5;
 

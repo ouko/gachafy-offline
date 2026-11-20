@@ -364,6 +364,19 @@ All colors MUST be HSL.
   .safe-area-pb {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
+
+  .tier-scroll {
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .tier-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tier-scroll button {
+    scroll-snap-align: start;
+  }
 }
 
 @keyframes float {

@@ -9,7 +9,6 @@ import { getRadixService } from "@/lib/radix-lazy";
 import { getTxExplorerUrl, shortenTxHash } from "@/lib/radix-config";
 import { useBooster } from "@/hooks/useBooster";
 import { useAudio } from "@/hooks/useAudio";
-import AudioControls from "@/components/AudioControls";
 import { logger } from "@/lib/logger";
 import { FEATURE_OFFLINE_QUEUE, GACHA_DEPLOYED } from "@/lib/featureFlags";
 import { TierSelector, tiers, type Tier } from "@/components/TierSelector";
@@ -220,35 +219,7 @@ const Open = () => {
   }, [clearPendingDelta, setPendingTx, toast]);
 
   return (
-    <main className="min-h-screen bg-background p-4 pb-24 flex flex-col relative">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-2xl"
-          style={{ animation: "magical-float 6s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute bottom-20 right-10 w-32 h-32 bg-gradient-to-r from-blue-400/25 to-purple-400/25 rounded-full blur-xl"
-          style={{
-            animation: "magical-float 8s ease-in-out infinite",
-            animationDelay: "2s",
-          }}
-        />
-        <div
-          className="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-r from-pink-400/15 to-red-400/15 rounded-full blur-lg"
-          style={{
-            animation: "magical-float 10s ease-in-out infinite",
-            animationDelay: "4s",
-          }}
-        />
-        <div
-          className="absolute top-1/3 right-1/3 w-28 h-28 bg-gradient-to-r from-emerald-400/20 to-blue-400/20 rounded-full blur-xl"
-          style={{
-            animation: "magical-float 7s ease-in-out infinite",
-            animationDelay: "1s",
-          }}
-        />
-      </div>
-
+    <main className="game-background relative flex min-h-screen flex-col px-4 pb-28 pt-20">
       <BalanceDisplay
         balance={balance}
         pendingDelta={pendingDelta}
@@ -260,16 +231,18 @@ const Open = () => {
         hasError={hasBalanceError}
       />
 
-      <div className="flex-1 flex flex-col justify-center relative z-10">
-        <TierSelector
-          selectedTier={selectedTier}
-          onSelect={setSelectedTier}
-          onPlaySound={playButtonClick}
-          onPlayHover={playButtonHover}
-          boosterActive={boosterActive}
-          boosterCost={boosterCost}
-          isLoading={false}
-        />
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center py-6">
+        <div className="w-full">
+          <TierSelector
+            selectedTier={selectedTier}
+            onSelect={setSelectedTier}
+            onPlaySound={playButtonClick}
+            onPlayHover={playButtonHover}
+            boosterActive={boosterActive}
+            boosterCost={boosterCost}
+            isLoading={false}
+          />
+        </div>
 
         {boosterCost > 0 && (
           <BoosterControl
@@ -280,7 +253,7 @@ const Open = () => {
           />
         )}
 
-        <div className="mt-12 flex justify-center">
+        <div className="mt-8 flex w-full justify-center">
           <OpenButton
             isConnected={isConnected}
             canAfford={canAfford}
@@ -354,8 +327,8 @@ const Open = () => {
             </div>
           )}
           {isConnected && address && (
-            <p className="text-green-400 text-sm font-mono break-all" title={address}>
-              Connected: {address}
+            <p className="font-mono text-xs text-emerald-400" title={address}>
+              Connected: {address.slice(0, 12)}…{address.slice(-6)}
             </p>
           )}
 
@@ -365,7 +338,6 @@ const Open = () => {
         </div>
       </div>
 
-      <AudioControls />
     </main>
   );
 };
