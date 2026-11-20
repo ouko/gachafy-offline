@@ -69,6 +69,7 @@ jobs:
         uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           targets: wasm32-unknown-unknown
+          components: rust-src
       - name: Test contract
         run: cargo test --manifest-path scrypto/gacha/Cargo.toml
       - name: Build release Wasm
